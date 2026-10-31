@@ -9,12 +9,18 @@ working on new bodies.
 It also turns phone-app presets into LUTs. You apply the preset to a colour chart, drop the result in, and get
 a `.cube` file back.
 
-Windows only for now. It needs Lightroom Classic or Adobe Camera Raw installed, because it builds on Adobe's
+Runs on Windows and macOS (Apple Silicon). It needs Lightroom Classic or Adobe Camera Raw installed, because it builds on Adobe's
 own camera profiles.
 
 ## Download
 
-Get `ExtraSauce.exe` from [wrkxflw.github.io/extra-sauce](https://wrkxflw.github.io/extra-sauce) or the [Releases](../../releases) page and run it. You don't need to install anything.
+Get it from [wrkxflw.github.io/extra-sauce](https://wrkxflw.github.io/extra-sauce) or the [Releases](../../releases) page.
+
+- **Windows:** run `ExtraSauce.exe`. You don't need to install anything. SmartScreen may warn because the exe isn't
+  code-signed: click More info, then Run anyway.
+- **Mac:** open `ExtraSauce-mac.dmg` and drag Extra Sauce to Applications. The app isn't notarised by Apple, so the
+  first time you open it macOS will refuse. Go to System Settings → Privacy & Security, click **Open Anyway**, and
+  confirm. On a Mac, profiles install to `~/Library/Application Support/Adobe/CameraRaw/CameraProfiles`.
 
 ## Camera profiles
 
