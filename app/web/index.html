@@ -282,7 +282,7 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
         <div><h5>Turn a LUT into a profile</h5>
           <ol>
             <li>Open any photo in Camera Raw (Photoshop: <kbd>Filter</kbd> → <kbd>Camera Raw Filter</kbd>).</li>
-            <li>Presets panel → <kbd>⋯</kbd>, hold <kbd>Alt</kbd> → <b>Create Profile</b>.</li>
+            <li>Presets panel → <kbd>⋯</kbd>, hold <kbd class="altkey">Alt</kbd> → <b>Create Profile</b>.</li>
             <li>Tick <b>Color Lookup Table</b>, load the .cube, set <b>Space: sRGB</b>, untick everything else.</li>
             <li>Restart Lightroom. It's in the Profile Browser, for JPGs and raws.</li>
           </ol></div>
@@ -450,6 +450,7 @@ window.addEventListener("pywebviewready", async () => {
   api.page_ready();
   setTimeout(hideSplash, 0);
   const s = await api.init();
+  if (s.platform === "darwin") document.querySelectorAll(".altkey").forEach(k => k.textContent = "Option");
   state.cameras = s.cameras;
   Object.assign(state, { install: s.settings.install, copy: s.settings.copy, skip: s.settings.skip, copyDir: s.settings.copyDir, lutDir: s.settings.lutDir });
   s.settings.targets.forEach(t => state.cameras.includes(t) && state.targets.add(t));

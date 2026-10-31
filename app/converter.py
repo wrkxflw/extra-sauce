@@ -6,6 +6,7 @@ Standard, then laid over each target camera's Adobe Standard calibration.
 from __future__ import annotations
 
 import os
+import sys
 import re
 import struct
 from dataclasses import dataclass
@@ -17,8 +18,12 @@ from .dcp import read_dcp
 from .pipeline import ACR3, XYZ_TO_PP, Profile, lab
 from .transfer import LOOK_DIMS, Transferred, build_look
 
-ADOBE_STANDARD_DIR = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "Adobe/CameraRaw/CameraProfiles/Adobe Standard"
-USER_PROFILES_DIR = Path(os.environ.get("APPDATA", "")) / "Adobe/CameraRaw/CameraProfiles"
+if sys.platform == "darwin":
+    ADOBE_STANDARD_DIR = Path("/Library/Application Support/Adobe/CameraRaw/CameraProfiles/Adobe Standard")
+    USER_PROFILES_DIR = Path.home() / "Library/Application Support/Adobe/CameraRaw/CameraProfiles"
+else:
+    ADOBE_STANDARD_DIR = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "Adobe/CameraRaw/CameraProfiles/Adobe Standard"
+    USER_PROFILES_DIR = Path(os.environ.get("APPDATA", "")) / "Adobe/CameraRaw/CameraProfiles"
 INSTALL_DIR = USER_PROFILES_DIR / "Generated Profiles"
 
 ASCII, LONG, FLOAT = 2, 4, 11

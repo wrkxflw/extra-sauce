@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import threading
 import traceback
@@ -19,7 +20,9 @@ from . import chart, converter
 from .dcp import read_dcp
 
 APP_NAME = "Extra Sauce"
-SETTINGS_PATH = Path(os.environ.get("APPDATA", Path.home())) / APP_NAME / "settings.json"
+MAC = sys.platform == "darwin"
+_SETTINGS_ROOT = Path.home() / "Library/Application Support" if MAC else Path(os.environ.get("APPDATA", Path.home()))
+SETTINGS_PATH = _SETTINGS_ROOT / APP_NAME / "settings.json"
 DEFAULT_COPY_DIR = Path.home() / "Desktop" / "Extra Sauce Profiles"
 DEFAULT_LUT_DIR = Path.home() / "Desktop" / "Extra Sauce LUTs"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
@@ -77,6 +80,7 @@ class Api:
             "cameras": sorted(self._cameras, key=str.lower),
             "standardDir": str(converter.ADOBE_STANDARD_DIR),
             "installDir": str(converter.INSTALL_DIR),
+            "platform": sys.platform,
             "settings": {
                 "install": s.get("install", True), "copy": s.get("copy", True),
                 "copyDir": s.get("copy_dir", str(DEFAULT_COPY_DIR)), "skip": s.get("skip_existing", True),
@@ -109,7 +113,10 @@ class Api:
     def open_folder(self, path):
         p = Path(path)
         p.mkdir(parents=True, exist_ok=True)
-        os.startfile(p)
+        if MAC:
+            subprocess.run(["open", str(p)], check=False)
+        else:
+            os.startfile(p)
 
     def browse_folder(self, start=""):
         r = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=start or str(Path.home()))
@@ -212,7 +219,8 @@ class Api:
                     step += 1
                     self._js("progress", step / total)
             self._js("done", {"made": made, "skipped": skipped, "failed": failed, "install": install,
-                              "installDir": str(converter.INSTALL_DIR), "copyDir": copy_dir or ""})
+                              "installDir": str(converter.INSTALL_DIR),
+            "platform": sys.platform, "copyDir": copy_dir or ""})
         except Exception:
             self._js("log", "error", "Unexpected error", traceback.format_exc())
             self._js("done", {"made": made, "skipped": skipped, "failed": failed + 1, "install": install,
@@ -290,4 +298,6 @@ def main():
         APP_NAME, str(_web_dir() / "index.html"), js_api=api,
         width=1180, height=820, min_size=(960, 680), background_color="#FFFFFF")
     api._window = window
-    webview.start(_bind_drop, (window, api), icon=str(_web_dir().parent / "assets" / "icon.ico"))
+    # macOS takes the Dock icon from the app bundle; Windows needs it passed in
+    icon = None if MAC else str(_web_dir().parent / "assets" / "icon.ico")
+    webview.start(_bind_drop, (window, api), icon=icon)

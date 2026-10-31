@@ -4,7 +4,8 @@ Logo: line-art takeout box (thick dark outline, flat fills), a strip of film bei
 of it by a pair of chopsticks, red badge on the front. Laid out after the user's sketch.
 Splash: the logo large inside a soft circle on white, wordmark and "powered by WRK×FLW" below.
 
-Writes app/web/logo.png, app/web/icon.png, app/assets/icon.ico and app/assets/splash.png.
+Writes app/web/logo.png, app/web/icon.png, app/assets/icon.ico (Windows), app/assets/icon.icns (macOS)
+and app/assets/splash.png.
 Everything is drawn at 4x and downsampled.
 """
 from pathlib import Path
@@ -179,5 +180,6 @@ if __name__ == "__main__":
     icon = tile(logo)
     icon.save(ROOT / "web" / "icon.png")
     icon.save(ROOT / "assets" / "icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    icon.save(ROOT / "assets" / "icon.icns")
     splash(logo).save(ROOT / "assets" / "splash.png")
     print("ok")

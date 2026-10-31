@@ -1,0 +1,46 @@
+# Builds the macOS app (Apple Silicon) and, for a published release, attaches the .dmg to it.
+name: Build macOS
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Build app
+        run: pyinstaller --noconfirm build_mac.spec
+      - name: Smoke test (the window opens and stays up)
+        run: |
+          "dist/Extra Sauce.app/Contents/MacOS/ExtraSauce" > run.log 2>&1 &
+          PID=$!
+          sleep 25
+          screencapture -x smoke.png || true
+          if kill -0 $PID 2>/dev/null; then echo "still running after 25s"; kill $PID; else echo "exited early"; cat run.log; exit 1; fi
+      - name: Make .dmg
+        run: |
+          mkdir dmg && cp -R "dist/Extra Sauce.app" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Extra Sauce" -srcfolder dmg -ov -format UDZO ExtraSauce-mac.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extra-sauce-mac
+          path: |
+            ExtraSauce-mac.dmg
+            smoke.png
+            run.log
+      - name: Attach to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ExtraSauce-mac.dmg --clobber
