@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extra Sauce</title>
+<meta name="description" content="Rebuild camera look profiles for new camera bodies, and turn phone presets into LUTs. Free for Windows.">
+<link rel="icon" href="icon.png">
+<meta property="og:image" content="https://wrkxflw.github.io/extra-sauce/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,800;0,900;1,400&display=swap">
+<style>
+:root {
+  --canvas: #efeee9; --card: #ffffff; --ink: #161413; --muted: #6f6a64; --faint: #a7a29b;
+  --gold: #d5a63a; --gold-ink: #8f650c; --gold-soft: #f8efd9; --line: #e6e2da; --red: #fc5e3e;
+  --font: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 17px/1.6 var(--font); }
+a { color: var(--gold-ink); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+
+header { padding-block: 22px; }
+header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand img { width: 40px; height: 40px; }
+.word { font-size: 21px; line-height: 1; white-space: nowrap; }
+.word b { font-weight: 900; letter-spacing: .03em; }
+.word i { color: var(--gold); padding-left: 6px; }
+.gh { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+.gh:hover { color: var(--ink); }
+
+.hero { padding-block: 40px 56px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; }
+.hero h1 { font-size: clamp(36px, 5.4vw, 60px); line-height: 1.04; font-weight: 900; letter-spacing: -.02em; margin: 0 0 18px; text-wrap: balance; }
+.hero h1 em { font-weight: 400; color: var(--gold); }
+.hero p { color: var(--muted); margin: 0 0 28px; max-width: 34em; }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; }
+.btn { display: inline-block; background: var(--gold); color: #fff; text-decoration: none; font-weight: 900; letter-spacing: .08em;
+  text-transform: uppercase; font-size: 15px; padding: 16px 28px; border-radius: 14px; box-shadow: 0 8px 22px rgba(180,130,30,.28); }
+.btn:hover { background: #c8962a; }
+.small { font-size: 14px; color: var(--faint); }
+.disc { aspect-ratio: 1; max-width: 420px; width: 100%; justify-self: center; border-radius: 50%; background: #faf4ec;
+  border: 1.5px solid #f0e4d4; display: grid; place-items: center; }
+.disc img { width: 82%; margin-top: -4%; }
+
+.shot { background: var(--card); border-radius: 18px; padding: 10px; box-shadow: 0 18px 50px rgba(40,30,10,.10); }
+.shot img { display: block; width: 100%; height: auto; border-radius: 10px; }
+
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-block: 56px 20px; }
+.card { background: var(--card); border-radius: 18px; padding: 28px 30px; box-shadow: 0 2px 10px rgba(40,30,10,.04); min-width: 0; }
+.label { font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-ink); }
+.card h2 { font-size: 24px; line-height: 1.2; font-weight: 900; margin: 8px 0 12px; text-wrap: balance; }
+.card p, .card li { color: var(--muted); font-size: 16px; }
+.card ol { padding-left: 20px; margin: 0; }
+.card li + li { margin-top: 6px; }
+
+.how { padding-block: 20px 56px; }
+.how .card { display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
+.formula { font: 600 14px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--gold-soft); color: var(--gold-ink);
+  padding: 12px 14px; border-radius: 10px; overflow-x: auto; white-space: nowrap; margin: 14px 0; }
+.stat { font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+.stat span { font-size: 22px; color: var(--gold); padding-left: 4px; }
+
+footer { padding-block: 28px 44px; border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font-size: 14px; color: var(--faint); }
+.powered em { font-style: italic; }
+.powered strong { font-weight: 900; color: #9a9ea6; }
+.powered strong span { color: var(--gold); font-weight: 400; font-size: 1.2em; line-height: 0; vertical-align: -.06em; }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; padding-block: 16px 40px; }
+  .disc { max-width: 280px; grid-row: 1; }
+  .cards, .how .card { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.png" alt=""><span class="word"><b>EXTRA</b><i>sauce</i></span></a>
+    <a class="gh" href="https://github.com/wrkxflw/extra-sauce">Source on GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section class="wrap hero">
+    <div>
+      <h1>Your favourite looks, <em>on your new camera.</em></h1>
+      <p>Extra Sauce rebuilds camera look profiles for bodies they were never made for, so your old Lightroom presets keep working when you upgrade. It also turns phone-app presets into LUTs.</p>
+      <div class="cta">
+        <a class="btn" href="https://github.com/wrkxflw/extra-sauce/releases/latest/download/ExtraSauce.exe">Download for Windows</a>
+        <span class="small">Free · 30 MB · no install<br>Needs Lightroom Classic or Camera Raw</span>
+      </div>
+    </div>
+    <div class="disc"><img src="logo.png" alt="A takeout box with chopsticks pulling out a strip of film"></div>
+  </section>
+
+  <section class="wrap">
+    <div class="shot"><img src="app.png" width="1164" height="631" alt="The Extra Sauce window: looks on the left, cameras to convert to on the right"></div>
+  </section>
+
+  <section class="wrap cards">
+    <article class="card">
+      <div class="label">Camera profiles</div>
+      <h2>One look, every camera</h2>
+      <ol>
+        <li>Drop in your <code>.dcp</code> look profiles, or a whole folder of them.</li>
+        <li>Tick the cameras you shoot with. There are 1,400+ to choose from.</li>
+        <li>Click Convert. Each look is built for each camera and installed straight into Lightroom.</li>
+      </ol>
+      <p>Converted profiles keep their original names, so your presets find them without any edits.</p>
+    </article>
+    <article class="card">
+      <div class="label">Phone presets</div>
+      <h2>Rescue a preset you can't export</h2>
+      <ol>
+        <li>Save the blank colour chart: 15,625 patches.</li>
+        <li>Apply the preset to it on your phone and export it at full size.</li>
+        <li>Drop it back in to get a 33-point <code>.cube</code> LUT.</li>
+      </ol>
+      <p>Tested against an app's own export on a real photo, it comes out at 1.0 ΔE on average.</p>
+    </article>
+  </section>
+
+  <section class="wrap how">
+    <div class="card">
+      <div>
+        <div class="label">Accuracy</div>
+        <div class="stat">~1<span>ΔE</span></div>
+        <p class="small">That's the average difference from a film pack's own profiles for the same cameras, across 40,000 colours.</p>
+      </div>
+      <div>
+        <h2>How it works</h2>
+        <p>A camera profile runs in this order: matrices → calibration → look → tone curve. Look makers build on Adobe Standard, so Extra Sauce measures what the look does on top of Adobe Standard's calibration:</p>
+        <div class="formula">T = LookTable ∘ HueSatMap ∘ (Adobe Standard HueSatMap)⁻¹</div>
+        <p>That transform is then placed on your new camera's own Adobe Standard profile, along with the look's tone curve. Each conversion checks itself by rebuilding the look for its original camera and measuring the difference.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="powered"><em>powered by</em>&ensp;<strong>WRK<span>×</span>FLW</strong></span>
+    <span>Open source under GPL-3.0. Not affiliated with Adobe or any profile maker.</span>
+  </div>
+</footer>
+</body>
+</html>

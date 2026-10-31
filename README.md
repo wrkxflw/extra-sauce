@@ -14,7 +14,7 @@ own camera profiles.
 
 ## Download
 
-Get `ExtraSauce.exe` from the [Releases](../../releases) page and run it. You don't need to install anything.
+Get `ExtraSauce.exe` from [wrkxflw.github.io/extra-sauce](https://wrkxflw.github.io/extra-sauce) or the [Releases](../../releases) page and run it. You don't need to install anything.
 
 ## Camera profiles
 
