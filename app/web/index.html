@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Extra Sauce</title>
+<style>
+/* Extra Sauce: Seamless applet palette (white, warm greys, one gold), wrkflw card shell.
+   Layout: top bar card with wordmark + pill nav; each page is a stack of rounded cards. */
+@font-face { font-family: "Nunito Sans"; src: url("fonts/NunitoSans.ttf"); font-weight: 200 1000; }
+@font-face { font-family: "Nunito Sans"; src: url("fonts/NunitoSans-Italic.ttf"); font-weight: 200 1000; font-style: italic; }
+
+:root {
+  --canvas: #efeee9;
+  --card: #ffffff;
+  --panel: #faf9f6;
+  --line: #ecebe6;
+  --line-soft: #f3f2ee;
+  --text: #1f1d1b;
+  --muted: #8a8780;
+  --faint: #b9b6ae;
+  --gold: #d5a63a;
+  --gold-dark: #b98a24;
+  --gold-ink: #9a6e10;
+  --gold-soft: #fbf4e2;
+  --ok: #3b6d11; --ok-soft: #eaf3de;
+  --warn: #8a6d1f; --warn-soft: #fbf7ec;
+  --danger: #b23030; --danger-soft: #fcebeb;
+  --radius: 10px; --radius-lg: 18px;
+  --shadow: 0 1px 2px rgba(20,18,12,.05), 0 6px 24px rgba(20,18,12,.05);
+  --font: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--canvas); color: var(--text); font: 400 13px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased; overflow: hidden; user-select: none;
+}
+button, input { font: inherit; color: inherit; }
+::selection { background: var(--gold-soft); }
+
+.shell { height: 100%; display: flex; flex-direction: column; gap: 16px; padding: 18px; }
+
+/* ── top bar ── */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 12px 18px 12px 14px;
+  background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); flex: none; }
+.topbar img { width: 46px; height: 46px; }
+.wordmark { font-size: 21px; letter-spacing: .01em; line-height: 1; display: flex; align-items: baseline; }
+.wordmark b { font-weight: 900; letter-spacing: .03em; }
+.wordmark i { font-style: italic; color: var(--gold); padding: 0 2px 0 6px; font-size: 20px; }
+/* "powered by WRK×FLW": same treatment as the Seamless gallery footers */
+.powered { margin-left: 14px; font-size: 11px; color: #b0b4bc; letter-spacing: 0; }
+.powered em { font-style: italic; font-weight: 400; }
+.powered strong { font-weight: 900; letter-spacing: -.01em; color: #9a9ea6; }
+.powered strong span { color: var(--gold); font-weight: 400; font-size: 1.2em; line-height: 0; vertical-align: -.06em; padding: 0 .04em; }
+.nav { margin-left: auto; display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 999px; }
+.nav button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; cursor: pointer;
+  font-weight: 900; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  transition: background .15s, color .15s; }
+.nav button:hover { color: var(--text); }
+.nav button.on { background: var(--gold); color: #fff; box-shadow: 0 2px 8px rgba(213,166,58,.35); }
+
+/* ── pages / cards ── */
+.page { flex: 1; min-height: 0; display: none; gap: 16px; }
+.page.on { display: grid; }
+#cams { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+#luts { grid-template-columns: 1.15fr 1fr; grid-template-rows: auto minmax(0, 1fr); }
+.card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line-soft); flex: none; }
+.card-title { font-weight: 900; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.card-head .count { margin-left: auto; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.card-body { padding: 16px 18px; min-height: 0; }
+.scroll { overflow: auto; flex: 1; }
+.scroll::-webkit-scrollbar { width: 10px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid var(--card); }
+
+/* ── buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--gold); background: var(--gold); color: #fff; font-weight: 900; font-size: 11.5px;
+  letter-spacing: .06em; text-transform: uppercase; transition: background .15s, border-color .15s, transform .05s; }
+.btn:hover { background: var(--gold-dark); border-color: var(--gold-dark); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.ghost { background: var(--card); border-color: var(--line); color: var(--text); }
+.btn.ghost:hover { background: var(--line-soft); }
+.btn.big { padding: 13px 26px; font-size: 13px; border-radius: 12px; box-shadow: 0 4px 14px rgba(213,166,58,.35); }
+.btn svg { width: 15px; height: 15px; }
+.linkish { border: 0; background: none; color: var(--gold-ink); cursor: pointer; font-weight: 900; font-size: 11px;
+  letter-spacing: .06em; text-transform: uppercase; }
+
+/* ── drop zone ── */
+.drop { margin: 16px 18px 0; border: 1.5px dashed #e3d6b2; background: var(--gold-soft); border-radius: 14px;
+  padding: 20px; display: flex; align-items: center; gap: 16px; transition: background .15s, border-color .15s, transform .15s; flex: none; }
+.drop .ico { width: 46px; height: 46px; border-radius: 12px; background: #fff; display: grid; place-items: center; flex: none;
+  box-shadow: 0 1px 4px rgba(154,110,16,.12); color: var(--gold); }
+.drop .ico svg { width: 24px; height: 24px; }
+.drop h3 { font-weight: 900; font-size: 13.5px; letter-spacing: .01em; }
+.drop p { color: var(--muted); font-size: 12px; }
+.drop .acts { margin-left: auto; display: flex; gap: 8px; flex: none; }
+body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); transform: scale(1.01); }
+
+/* ── rows ── */
+.list { padding: 8px 10px 12px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 10px; }
+.row + .row { border-top: 1px solid var(--line-soft); }
+.row:hover { background: var(--panel); }
+.row .film { width: 30px; height: 30px; border-radius: 8px; background: var(--gold-soft); color: var(--gold-ink);
+  display: grid; place-items: center; flex: none; }
+.row .film svg { width: 16px; height: 16px; }
+.row .main { min-width: 0; flex: 1; }
+.row .name { font-weight: 900; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .sub { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.x { border: 0; background: none; color: var(--faint); cursor: pointer; width: 26px; height: 26px; border-radius: 7px; font-size: 16px; line-height: 1; flex: none; }
+.x:hover { background: var(--danger-soft); color: var(--danger); }
+.pill { font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; flex: none; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.err { background: var(--danger-soft); color: var(--danger); }
+.pill.idle { background: var(--line-soft); color: var(--muted); }
+.empty { color: var(--faint); text-align: center; padding: 34px 20px; font-size: 12.5px; }
+.empty b { display: block; color: var(--muted); font-weight: 900; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+
+/* ── camera picker ── */
+.search { margin: 14px 18px 0; position: relative; flex: none; }
+.search input { width: 100%; padding: 11px 14px 11px 38px; border-radius: 11px; border: 1px solid var(--line);
+  background: var(--panel); outline: none; transition: border-color .15s, background .15s; }
+.search input:focus { border-color: var(--gold); background: #fff; }
+.search svg { position: absolute; left: 13px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--faint); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 18px 2px; flex: none; max-height: 92px; overflow: auto; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--gold-soft); color: var(--gold-ink);
+  border-radius: 999px; padding: 4px 6px 4px 11px; font-size: 11.5px; font-weight: 900; }
+.chip button { border: 0; background: rgba(154,110,16,.12); color: var(--gold-ink); border-radius: 50%; width: 17px; height: 17px;
+  cursor: pointer; font-size: 11px; line-height: 1; }
+.cam { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+.cam:hover { background: var(--panel); }
+.cam .box { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid #d9d6cd; display: grid; place-items: center; flex: none;
+  transition: background .12s, border-color .12s; }
+.cam.on .box { background: var(--gold); border-color: var(--gold); }
+.cam.on .box::after { content: ""; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.cam .brand { color: var(--faint); margin-right: 4px; }
+.cam.on { font-weight: 900; }
+.more { color: var(--faint); font-size: 11.5px; text-align: center; padding: 10px; }
+
+/* ── output bar ── */
+.out { grid-column: 1 / -1; flex-direction: row; align-items: stretch; }
+.opts { flex: 1; padding: 16px 20px; display: grid; gap: 10px; align-content: center; }
+.opt { display: flex; align-items: center; gap: 12px; }
+.switch { width: 38px; height: 22px; border-radius: 999px; background: #dcd9d0; position: relative; cursor: pointer; flex: none; transition: background .15s; border: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .15s; }
+.switch.on { background: var(--gold); }
+.switch.on::after { transform: translateX(16px); }
+.opt .label { font-size: 12.5px; }
+.opt .hint { color: var(--faint); font-size: 11.5px; }
+.path { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.path code { font: 400 11.5px/1.3 Consolas, monospace; color: var(--muted); background: var(--panel); border-radius: 7px;
+  padding: 5px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.go { width: 340px; flex: none; border-left: 1px solid var(--line-soft); padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+.go .summary { color: var(--muted); font-size: 12px; min-height: 18px; }
+.go .summary b { color: var(--text); font-weight: 900; }
+.bar { height: 6px; background: var(--line-soft); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), #e8c165); border-radius: 999px; transition: width .25s; }
+
+/* ── activity ── */
+.drawer { position: fixed; right: 18px; bottom: 18px; width: 420px; max-height: 46vh; display: none; z-index: 5; }
+.drawer.on { display: flex; }
+.log { padding: 6px 12px 12px; }
+.ev { display: flex; gap: 10px; padding: 7px 6px; align-items: flex-start; }
+.ev .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--faint); }
+.ev.ok .dot { background: #6da23a; } .ev.check .dot { background: var(--gold); } .ev.error .dot { background: var(--danger); }
+.ev.info .dot { background: var(--text); }
+.ev .t { font-weight: 900; font-size: 12px; } .ev .s { color: var(--muted); font-size: 11.5px; word-break: break-word; }
+
+/* ── LUT steps ── */
+.steps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); }
+.step { padding: 18px 20px; display: flex; gap: 14px; }
+.step + .step { border-left: 1px solid var(--line-soft); }
+.num { width: 30px; height: 30px; border-radius: 50%; background: var(--gold-soft); color: var(--gold-ink); font-weight: 900;
+  display: grid; place-items: center; flex: none; font-size: 13px; }
+.step h4 { font-weight: 900; font-size: 13px; margin-bottom: 3px; }
+.step p { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.tips { padding: 16px 20px; color: var(--muted); font-size: 12.5px; display: grid; gap: 12px; align-content: start; }
+.tips h5 { color: var(--text); font-weight: 900; font-size: 12.5px; margin-bottom: 2px; }
+.tips ol { padding-left: 18px; display: grid; gap: 4px; }
+.tips kbd { font: 900 10.5px var(--font); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--text); }
+.namefield { border: 1px solid transparent; background: transparent; border-radius: 7px; padding: 3px 6px; margin-left: -6px; font-weight: 900; font-size: 13px; width: 100%; outline: none; }
+.namefield:hover { border-color: var(--line); }
+.namefield:focus { border-color: var(--gold); background: #fff; }
+.foot { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--line-soft); flex: none; }
+
+.toast { position: fixed; left: 50%; top: 104px; transform: translateX(-50%) translateY(-12px); opacity: 0;
+  background: var(--text); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 12.5px; transition: .2s; pointer-events: none; z-index: 9; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ── splash: same composition as the startup image, fades out once the app is ready ── */
+.splash { position: fixed; inset: 0; background: #fff; z-index: 20; display: grid; place-content: center; justify-items: center;
+  transition: opacity .45s ease, visibility .45s; }
+.splash.gone { opacity: 0; visibility: hidden; }
+.splash .disc { width: 300px; height: 300px; border-radius: 50%; background: #faf4ec; border: 1.5px solid #f0e4d4;
+  display: grid; place-items: center; }
+.splash .disc img { width: 250px; height: 250px; margin-top: -12px; }
+.splash .wordmark { font-size: 40px; margin-top: 30px; }
+.splash .wordmark i { font-size: 36px; padding: 0 6px; }
+.splash .powered { margin: 14px 0 0; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <img src="logo.png" alt="">
+    <div class="wordmark"><b>EXTRA</b><i>sauce</i>
+      <span class="powered"><em>powered by</em>&ensp;<strong>WRK<span>×</span>FLW</strong></span></div>
+    <nav class="nav">
+      <button data-page="cams" class="on">Camera profiles</button>
+      <button data-page="luts">Phone presets</button>
+    </nav>
+  </header>
+
+  <!-- ── camera profiles ── -->
+  <section class="page on" id="cams">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Your looks</span><span class="count" id="lookCount"></span></div>
+      <div class="drop">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="10" height="13" rx="1.5"/><path d="M5 6V4h6v2M13 9h8v7h-8M15 9v7M19 9v7"/></svg></div>
+        <div><h3>Drop camera profiles here</h3></div>
+        <div class="acts"><button class="btn ghost" id="addFiles">Add files</button><button class="btn ghost" id="addFolder">Folder</button></div>
+      </div>
+      <div class="scroll list" id="looks"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">New cameras</span><span class="count" id="camCount"></span></div>
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" placeholder="Search cameras" autocomplete="off" spellcheck="false"></div>
+      <div class="chips" id="chips"></div>
+      <div class="scroll list" id="camList"></div>
+    </div>
+
+    <div class="card out">
+      <div class="opts">
+        <div class="opt"><button class="switch" id="swInstall"></button><span class="label">Install into Lightroom</span></div>
+        <div class="opt"><button class="switch" id="swCopy"></button><span class="label">Save copies to</span>
+          <div class="path"><code id="copyDir"></code><button class="linkish" id="browseCopy">Change</button></div></div>
+        <div class="opt"><button class="switch" id="swSkip"></button><span class="label">Skip cameras that already have the look</span></div>
+      </div>
+      <div class="go">
+        <div class="summary" id="summary">Add a look and pick a camera.</div>
+        <div class="bar"><i id="bar"></i></div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <button class="btn big" id="convert" disabled>Convert</button>
+          <button class="linkish" id="showLog">Activity</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── phone presets ── -->
+  <section class="page" id="luts">
+    <div class="card steps">
+      <div class="step"><div class="num">1</div><div><h4>Save the chart</h4><p>A grid of 15,625 colours to run through the preset.</p><button class="btn ghost" id="saveChart">Save chart</button></div></div>
+      <div class="step"><div class="num">2</div><div><h4>Apply the preset on your phone</h4><p>Full strength, nothing else. Export at full size and bring it back as an original file, not through Messages or WhatsApp.</p></div></div>
+      <div class="step"><div class="num">3</div><div><h4>Drop the exports here</h4><p>Each one becomes a LUT named after the file. Rename them in the list.</p><button class="btn ghost" id="addExports">Add exports</button></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Exported charts</span><span class="count" id="expCount"></span></div>
+      <div class="drop">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></div>
+        <div><h3>Drop exported charts</h3></div>
+      </div>
+      <div class="scroll list" id="exports"></div>
+      <div class="foot">
+        <div class="path"><code id="lutDir"></code><button class="linkish" id="browseLut">Change</button><button class="linkish" id="openLut">Open</button></div>
+        <button class="btn" id="makeLuts" disabled>Make LUTs</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Into Lightroom</span></div>
+      <div class="tips">
+        <div><h5>Turn a LUT into a profile</h5>
+          <ol>
+            <li>Open any photo in Camera Raw (Photoshop: <kbd>Filter</kbd> → <kbd>Camera Raw Filter</kbd>).</li>
+            <li>Presets panel → <kbd>⋯</kbd>, hold <kbd>Alt</kbd> → <b>Create Profile</b>.</li>
+            <li>Tick <b>Color Lookup Table</b>, load the .cube, set <b>Space: sRGB</b>, untick everything else.</li>
+            <li>Restart Lightroom. It's in the Profile Browser, for JPGs and raws.</li>
+          </ol></div>
+        <div><h5>On raw files</h5>Set the base profile to <b>Camera Standard</b> first if your old edits were in-camera JPGs. That's the closest match to the camera's own rendering.</div>
+        <div><h5>A LUT holds colour only</h5>If a chart shows grain or a vignette, add those with Lightroom's Effects sliders.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="card drawer" id="drawer">
+  <div class="card-head"><span class="card-title">Activity</span><button class="x" id="closeLog" style="margin-left:auto">×</button></div>
+  <div class="scroll log" id="log"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="splash" id="splash">
+  <div class="disc"><img src="logo.png" alt=""></div>
+  <div class="wordmark"><b>EXTRA</b><i>sauce</i></div>
+  <span class="powered"><em>powered by</em>&ensp;<strong>WRK<span>×</span>FLW</strong></span>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const FILM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="9" height="13" rx="1.5"/><path d="M6 6V4h5v2M13 10h7v6h-7"/></svg>';
+const state = { cameras: [], looks: [], targets: new Set(), exports: [], install: true, copy: true, skip: true, copyDir: "", lutDir: "", busy: false };
+let api;
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2600); }
+function persist() { api.save_settings({ install: state.install, copy: state.copy, skip: state.skip, copyDir: state.copyDir, targets: [...state.targets], lutDir: state.lutDir }); }
+
+// ── nav ──
+function show(page) {
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.page === page));
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === page));
+  if (page !== "cams") $("#drawer").classList.remove("on");
+  api && api.set_page(page);
+}
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => show(b.dataset.page));
+
+// ── looks ──
+function renderLooks() {
+  const el = $("#looks");
+  $("#lookCount").textContent = state.looks.length ? `${state.looks.length} look${state.looks.length > 1 ? "s" : ""}` : "";
+  el.innerHTML = state.looks.length ? state.looks.map(l => `
+    <div class="row">
+      <div class="film">${FILM}</div>
+      <div class="main"><div class="name">${esc(l.name)}</div><div class="sub">made for ${esc(l.camera)}</div></div>
+      ${l.ok ? '<span class="pill ok">Ready</span>' : '<span class="pill err" title="No Adobe Standard profile for this camera on this computer">Can\'t measure</span>'}
+      <button class="x" data-id="${l.id}" title="Remove">×</button>
+    </div>`).join("") : '<div class="empty"><b>No looks yet</b></div>';
+  el.querySelectorAll(".x").forEach(b => b.onclick = () => { api.remove_look(b.dataset.id); state.looks = state.looks.filter(l => l.id !== b.dataset.id); renderLooks(); });
+  updateSummary();
+}
+function looksAdded(r) {
+  state.looks.push(...r.added); renderLooks();
+  let msg = `Added ${r.added.length} look${r.added.length === 1 ? "" : "s"}`;
+  if (r.dupes) msg += ` · skipped ${r.dupes} duplicate${r.dupes === 1 ? "" : "s"}`;
+  if (r.bad) msg += ` · ${r.bad} unreadable`;
+  if (r.seen) toast(msg);
+}
+$("#addFiles").onclick = async () => looksAdded(await api.pick_profiles());
+$("#addFolder").onclick = async () => looksAdded(await api.pick_profile_folder());
+
+// ── cameras ──
+const LIMIT = 250;
+function brandSplit(c) { const i = c.indexOf(" "); return i > 0 ? [c.slice(0, i), c.slice(i + 1)] : ["", c]; }
+function renderCams() {
+  const terms = $("#q").value.toLowerCase().split(/\s+/).filter(Boolean);
+  const norm = s => s.toLowerCase().replace(/[-\s]/g, "");
+  const hits = state.cameras.filter(c => terms.every(t => c.toLowerCase().includes(t) || norm(c).includes(norm(t))));
+  $("#camCount").textContent = `${state.targets.size} selected · ${state.cameras.length} cameras`;
+  $("#camList").innerHTML = hits.slice(0, LIMIT).map(c => { const [b, m] = brandSplit(c);
+      return `<div class="cam ${state.targets.has(c) ? "on" : ""}" data-c="${esc(c)}"><span class="box"></span><span><span class="brand">${esc(b)}</span>${esc(m)}</span></div>`; }).join("")
+    + (hits.length > LIMIT ? `<div class="more">+${hits.length - LIMIT}</div>` : "")
+    + (!hits.length ? '<div class="empty"><b>No match</b></div>' : "");
+  $("#camList").querySelectorAll(".cam").forEach(r => r.onclick = () => { toggleCam(r.dataset.c); });
+  $("#chips").innerHTML = [...state.targets].sort().map(c => `<span class="chip">${esc(c)}<button data-c="${esc(c)}">×</button></span>`).join("");
+  $("#chips").querySelectorAll("button").forEach(b => b.onclick = () => toggleCam(b.dataset.c));
+  $("#chips").style.display = state.targets.size ? "" : "none";
+  updateSummary();
+}
+function toggleCam(c) { state.targets.has(c) ? state.targets.delete(c) : state.targets.add(c); persist(); renderCams(); }
+$("#q").oninput = renderCams;
+
+// ── output ──
+function setSwitch(id, key) { const el = $(id); el.classList.toggle("on", state[key]); el.onclick = () => { state[key] = !state[key]; el.classList.toggle("on", state[key]); persist(); updateSummary(); }; }
+$("#browseCopy").onclick = async () => { const d = await api.browse_folder(state.copyDir); if (d) { state.copyDir = d; $("#copyDir").textContent = d; persist(); } };
+function updateSummary() {
+  const n = state.looks.filter(l => l.ok).length, t = state.targets.size;
+  const ready = n && t && (state.install || state.copy) && !state.busy;
+  $("#convert").disabled = !ready;
+  if (state.busy) return;
+  $("#summary").innerHTML = !n ? "Add a look to start." : !t ? "Pick one or more cameras." :
+    !(state.install || state.copy) ? "Choose install, copies, or both." :
+    `<b>${n}</b> look${n > 1 ? "s" : ""} × <b>${t}</b> camera${t > 1 ? "s" : ""} = up to <b>${n * t}</b> profiles`;
+}
+$("#convert").onclick = async () => {
+  state.busy = true; $("#convert").disabled = true; $("#bar").style.width = "0";
+  $("#log").innerHTML = ""; $("#drawer").classList.add("on");
+  $("#summary").textContent = "Converting…";
+  await api.convert(state.looks.filter(l => l.ok).map(l => l.id), [...state.targets], state.install, state.copy ? state.copyDir : "", state.skip);
+};
+$("#showLog").onclick = () => $("#drawer").classList.toggle("on");
+$("#closeLog").onclick = () => $("#drawer").classList.remove("on");
+
+// ── LUTs ──
+function renderExports() {
+  const el = $("#exports");
+  $("#expCount").textContent = state.exports.length ? `${state.exports.length} chart${state.exports.length > 1 ? "s" : ""}` : "";
+  el.innerHTML = state.exports.length ? state.exports.map(e => `
+    <div class="row" data-id="${e.id}">
+      <div class="film">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg>'}</div>
+      <div class="main"><input class="namefield" value="${esc(e.name)}" data-id="${e.id}" spellcheck="false"><div class="sub">${esc(e.note || e.file)}</div></div>
+      <span class="pill ${e.status === "ok" ? "ok" : e.status === "warn" ? "warn" : e.status === "error" ? "err" : "idle"}">${e.status === "ok" ? "Saved" : e.status === "warn" ? "Check" : e.status === "error" ? "Failed" : e.status === "working" ? "Working" : "Ready"}</span>
+      <button class="x" data-id="${e.id}" title="Remove">×</button>
+    </div>`).join("") : '<div class="empty"><b>Nothing here yet</b></div>';
+  el.querySelectorAll(".namefield").forEach(i => i.oninput = () => { const e = state.exports.find(x => x.id === i.dataset.id); e.name = i.value; });
+  el.querySelectorAll(".x").forEach(b => b.onclick = () => { api.remove_export(b.dataset.id); state.exports = state.exports.filter(e => e.id !== b.dataset.id); renderExports(); });
+  $("#makeLuts").disabled = !state.exports.length;
+}
+function exportsAdded(list) { state.exports.push(...list.map(e => ({ ...e, status: "", note: "" }))); renderExports(); if (list.length) toast(`Added ${list.length} chart${list.length > 1 ? "s" : ""}`); }
+$("#addExports").onclick = async () => exportsAdded(await api.pick_exports());
+$("#saveChart").onclick = async () => { const p = await api.save_chart(); if (p) toast("Chart saved. Use the PNG if your app accepts it."); };
+$("#browseLut").onclick = async () => { const d = await api.browse_folder(state.lutDir); if (d) { state.lutDir = d; $("#lutDir").textContent = d; persist(); } };
+$("#openLut").onclick = () => api.open_folder(state.lutDir);
+$("#makeLuts").onclick = async () => {
+  state.exports.forEach(e => { e.status = "working"; e.note = ""; }); renderExports(); $("#makeLuts").disabled = true;
+  await api.make_luts(state.exports.map(e => ({ id: e.id, name: e.name })), state.lutDir);
+};
+
+// ── callbacks from Python ──
+window.vtg = {
+  looksAdded, exportsAdded,
+  log(kind, title, sub) {
+    const el = $("#log"); el.insertAdjacentHTML("beforeend", `<div class="ev ${kind}"><span class="dot"></span><div><div class="t">${esc(title)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div></div>`);
+    el.scrollTop = el.scrollHeight;
+  },
+  progress(f) { $("#bar").style.width = `${Math.round(f * 100)}%`; },
+  done(r) {
+    state.busy = false; $("#bar").style.width = "100%";
+    $("#summary").innerHTML = `<b>${r.made}</b> made · ${r.skipped} skipped · ${r.failed} failed` + (r.made && r.install ? " · restart Lightroom" : "");
+    $("#convert").disabled = false;
+    toast(r.made ? `${r.made} profile${r.made > 1 ? "s" : ""} ready` : "Nothing new to make");
+  },
+  lutResult(id, status, out, notes) {
+    const e = state.exports.find(x => x.id === id); if (!e) return;
+    e.status = status; e.note = (out ? `Saved ${out}` : "") + (notes && notes.length ? (out ? " · " : "") + notes.join(" ") : "");
+    renderExports();
+  },
+  lutsDone() { $("#makeLuts").disabled = false; toast("LUTs saved"); },
+};
+
+// drag highlight (the drop itself is handled in Python so it gets real file paths)
+let dragDepth = 0;
+addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); });
+addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+addEventListener("drop", () => { dragDepth = 0; document.body.classList.remove("dragging"); });
+addEventListener("dragover", e => e.preventDefault());
+
+const splashStart = Date.now();
+function hideSplash() { setTimeout(() => $("#splash").classList.add("gone"), Math.max(0, 350 - (Date.now() - splashStart))); }
+window.addEventListener("pywebviewready", async () => {
+  api = window.pywebview.api;
+  api.page_ready();
+  setTimeout(hideSplash, 0);
+  const s = await api.init();
+  state.cameras = s.cameras;
+  Object.assign(state, { install: s.settings.install, copy: s.settings.copy, skip: s.settings.skip, copyDir: s.settings.copyDir, lutDir: s.settings.lutDir });
+  s.settings.targets.forEach(t => state.cameras.includes(t) && state.targets.add(t));
+  $("#copyDir").textContent = state.copyDir; $("#lutDir").textContent = state.lutDir;
+  setSwitch("#swInstall", "install"); setSwitch("#swCopy", "copy"); setSwitch("#swSkip", "skip");
+  renderLooks(); renderCams(); renderExports();
+  if (!state.cameras.length) toast("No Adobe Standard profiles found. Install Lightroom Classic or Camera Raw.");
+  show(s.settings.page || "cams");
+});
+</script>
+</body>
+</html>
