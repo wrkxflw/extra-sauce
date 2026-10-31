@@ -197,8 +197,9 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
   transition: opacity .45s ease, visibility .45s; }
 .splash.gone { opacity: 0; visibility: hidden; }
 .splash .disc { width: 300px; height: 300px; border-radius: 50%; background: #faf4ec; border: 1.5px solid #f0e4d4;
-  display: grid; place-items: center; }
-.splash .disc img { width: 250px; height: 250px; margin-top: -12px; }
+  position: relative; }
+/* the box (not the whole drawing) sits on the disc's centre; the chopsticks may run past the edge */
+.splash .disc img { position: absolute; width: 96%; left: 12.2%; top: -15.4%; max-width: none; }
 .splash .wordmark { font-size: 40px; margin-top: 30px; }
 .splash .wordmark i { font-size: 36px; padding: 0 6px; }
 .splash .powered { margin: 14px 0 0; font-size: 13px; }
@@ -447,7 +448,6 @@ const splashStart = Date.now();
 function hideSplash() { setTimeout(() => $("#splash").classList.add("gone"), Math.max(0, 350 - (Date.now() - splashStart))); }
 window.addEventListener("pywebviewready", async () => {
   api = window.pywebview.api;
-  api.page_ready();
   setTimeout(hideSplash, 0);
   const s = await api.init();
   if (s.platform === "darwin") document.querySelectorAll(".altkey").forEach(k => k.textContent = "Option");

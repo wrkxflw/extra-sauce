@@ -89,14 +89,6 @@ class Api:
             },
         }
 
-    def page_ready(self):
-        """The window is showing its own splash: close PyInstaller's startup splash (exe only)."""
-        try:
-            import pyi_splash
-            pyi_splash.close()
-        except ImportError:
-            pass
-
     def set_page(self, page):
         self._page = page
         self._settings["page"] = page

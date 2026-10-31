@@ -145,8 +145,10 @@ def splash(logo: Image.Image) -> Image.Image:
     d = ImageDraw.Draw(im)
     cx, cy, r = W // 2, 196, 150
     d.ellipse(S(cx - r, cy - r, cx + r, cy + r), fill=(250, 244, 236, 255), outline=(240, 228, 212, 255), width=3 * SS)
-    big = logo.resize((250 * SS, 250 * SS), Image.LANCZOS)
-    im.alpha_composite(big, ((cx - 125) * SS, (cy - 132) * SS))
+    # centre the box itself on the disc (its centre is at 0.394, 0.681 of the drawing); chopsticks may overhang
+    L = 288
+    big = logo.resize((L * SS, L * SS), Image.LANCZOS)
+    im.alpha_composite(big, (round((cx - 0.394 * L) * SS), round((cy - 0.681 * L) * SS)))
     heavy = font("NunitoSans.ttf", 40, 900)
     italic = font("NunitoSans-Italic.ttf", 36, 400)
     small_i = font("NunitoSans-Italic.ttf", 13, 400)
