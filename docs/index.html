@@ -62,6 +62,15 @@ header .wrap { display: flex; align-items: center; justify-content: space-betwee
 .how .card { display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
 .formula { font: 600 14px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--gold-soft); color: var(--gold-ink);
   padding: 12px 14px; border-radius: 10px; overflow-x: auto; white-space: nowrap; margin: 14px 0; }
+.prose { min-width: 0; }
+.prose p { max-width: 40em; }
+.pipe { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.grp { display: grid; gap: 6px; }
+.tag { font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.grp.look .tag { color: var(--gold-ink); }
+.steps { display: flex; gap: 6px; }
+.steps span { font-size: 14px; font-weight: 800; padding: 9px 14px; border-radius: 10px; background: var(--canvas); color: var(--ink); white-space: nowrap; }
+.grp.look .steps span { background: var(--gold-soft); color: var(--gold-ink); }
 .stat { font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
 .stat span { font-size: 22px; color: var(--gold); padding-left: 4px; }
 
@@ -127,18 +136,25 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     </article>
   </section>
 
-  <section class="wrap how">
+  <section class="wrap how" id="how">
     <div class="card">
       <div>
         <div class="label">Accuracy</div>
         <div class="stat">~1<span>ΔE</span></div>
         <p class="small">That's the average difference from a film pack's own profiles for the same cameras, across 40,000 colours.</p>
       </div>
-      <div>
+      <div class="prose">
         <h2>How it works</h2>
-        <p>A camera profile runs in this order: matrices → calibration → look → tone curve. Look makers build on Adobe Standard, so Extra Sauce measures what the look does on top of Adobe Standard's calibration:</p>
-        <div class="formula">T = LookTable ∘ HueSatMap ∘ (Adobe Standard HueSatMap)⁻¹</div>
-        <p>That transform is then placed on your new camera's own Adobe Standard profile, along with the look's tone curve. Each conversion checks itself by rebuilding the look for its original camera and measuring the difference.</p>
+        <p>Every camera profile is a recipe Lightroom runs in a fixed order. The first two steps cancel out the quirks of one sensor. The last two are the style.</p>
+        <div class="pipe" aria-label="Matrices, then calibration, then look table, then tone curve">
+          <div class="grp"><span class="tag">the camera</span><div class="steps"><span>Matrices</span><span>Calibration</span></div></div>
+          <div class="grp look"><span class="tag">the look</span><div class="steps"><span>Look table</span><span>Tone curve</span></div></div>
+        </div>
+        <p>Look makers don't build each camera's profile from scratch. They start from Adobe Standard for that camera, which Adobe has tuned since 2008 so every camera's colour roughly agrees, and add their style on top. So if you have a look's profile for one camera and Adobe Standard for the same camera, the difference between them is the look itself, with the camera taken out. Extra Sauce works that difference out for every colour: it undoes Adobe Standard's calibration, then applies the look's own calibration and look table.</p>
+        <div class="formula">look = LookTable ∘ HueSatMap ∘ (Adobe Standard HueSatMap)⁻¹</div>
+        <p>To build the profile for your new camera, it starts from that camera's own Adobe Standard profile, whose matrices and calibration already handle the new sensor. It swaps in the extracted look, sampled across 90 hues, 25 saturations and 16 brightness levels, and copies across the original tone curve. The new file keeps the original profile name, so a preset that asks for that profile finds a version made for the new body.</p>
+        <p>It works inside the profile rather than as a filter on the finished image because by then the most saturated colours are already clipped, and no filter afterwards can bring them back. Inside the profile, the look sees the same colour data the original maker's did.</p>
+        <p>Each conversion checks itself by rebuilding the look for the camera it came from and comparing that with the real profile across 40,000 colours. If one look scores noticeably worse, try a different source camera: Adobe has revised some cameras' Adobe Standard profiles over the years.</p>
       </div>
     </div>
   </section>
