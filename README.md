@@ -71,7 +71,8 @@ This is for app presets that can't be exported, such as discontinued ones.
 5. To turn the `.cube` into a Lightroom profile, use Photoshop: open Camera Raw, go to Presets, Alt-click
    Create Preset, choose Create Profile, then pick Color Lookup Table with Space set to sRGB.
 
-Tested against a phone app's own export on a real photo, the LUT came out at 1.0 ΔE average.
+Tested against a phone app's own export on a real photo, the LUT came out at 1.0 ΔE average. Made into a
+Lightroom profile (step 5), the same look measured about 1.7 ΔE.
 
 ## Building from source
 
