@@ -189,6 +189,42 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
 .namefield:focus { border-color: var(--gold); background: #fff; }
 .foot { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--line-soft); flex: none; }
 
+/* ── accuracy map ── */
+.ev .see { margin-top: 3px; }
+.mapview { position: fixed; inset: 0; z-index: 8; background: rgba(239,238,233,.92); display: none; padding: 18px; }
+.mapview.on { display: flex; }
+.mapview > .card { flex: 1; min-width: 0; overflow: auto; }
+.map-head { display: flex; align-items: flex-start; gap: 16px; padding: 18px 22px 10px; }
+.map-head h2 { font-weight: 900; font-size: 20px; }
+.map-head .s { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.map-head .x { margin-left: auto; }
+.map-key { font-weight: 900; font-size: 12.5px; padding: 0 22px; min-height: 18px; }
+.toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 12px 22px 4px; font-size: 12px; }
+.toggles label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.toggles input { accent-color: var(--gold); width: 15px; height: 15px; margin: 0; }
+.toggles .sw { width: 26px; height: 0; border-top: 2px solid var(--text); }
+.toggles .sw.dash { border-top-style: dashed; } .toggles .sw.dot { border-top-style: dotted; border-top-width: 3px; }
+.toggles .hint { color: var(--faint); }
+.toggles .sep { width: 1px; height: 18px; background: var(--line); }
+.wheels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 6px 14px 0; }
+.wheel { text-align: center; min-width: 0; }
+.wheel h4 { font-weight: 900; font-size: 13px; } .wheel .sub { color: var(--muted); font-size: 11px; }
+.wheel canvas { width: 100%; aspect-ratio: 1; display: block; margin: 6px 0; }
+.wheel .foot2 { font-weight: 900; font-size: 11.5px; }
+.strips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; padding: 18px 22px; border-top: 1px solid var(--line-soft); margin-top: 14px; }
+.strip h5 { display: flex; font-weight: 900; font-size: 12px; margin-bottom: 8px; } .strip h5 span { margin-left: auto; }
+.strip .row2 { display: flex; gap: 10px; align-items: center; }
+.strip .pair { display: flex; width: 54px; height: 54px; border-radius: 8px; overflow: hidden; flex: none; }
+.strip .pair i { flex: 1; }
+.strip .ramp { flex: 1; position: relative; height: 30px; border-radius: 6px; }
+.strip .ramp b { position: absolute; top: 100%; width: 1px; height: 6px; background: var(--text); }
+.strip .ramp b::after { content: attr(data-v); position: absolute; top: 7px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--muted); font-weight: 700; }
+.strip .ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-weight: 700; margin: 0 0 3px 64px; }
+.strip .note { color: var(--faint); font-size: 10.5px; font-style: italic; margin-top: 18px; }
+.strips .read { color: var(--muted); font-size: 11.5px; } .strips .read h5 { color: var(--text); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0 22px 18px; font-size: 11px; color: var(--muted); font-weight: 700; align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+
 .toast { position: fixed; left: 50%; top: 104px; transform: translateX(-50%) translateY(-12px); opacity: 0;
   background: var(--text); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 12.5px; transition: .2s; pointer-events: none; z-index: 9; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -297,6 +333,25 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
 <div class="card drawer" id="drawer">
   <div class="card-head"><span class="card-title">Activity</span><button class="x" id="closeLog" style="margin-left:auto">×</button></div>
   <div class="scroll log" id="log"></div>
+</div>
+<div class="mapview" id="mapview">
+  <div class="card">
+    <div class="map-head">
+      <div><h2 id="mapTitle"></h2><div class="s" id="mapSub"></div></div>
+      <button class="x" id="closeMap" title="Close">×</button>
+    </div>
+    <div class="toggles">
+      <label><input type="checkbox" data-g="srgb" checked><span class="sw"></span>sRGB <span class="hint">standard screens</span></label>
+      <label><input type="checkbox" data-g="p3" checked><span class="sw dash"></span>Display P3 <span class="hint">newer phones and Macs</span></label>
+      <label><input type="checkbox" data-g="adobe"><span class="sw dot"></span>Adobe RGB <span class="hint">wide-gamut photo monitors</span></label>
+      <span class="sep"></span>
+      <label><input type="checkbox" id="fade" checked>Fade colours outside the ticked outlines</label>
+    </div>
+    <div class="map-key" id="mapKey"></div>
+    <div class="wheels" id="wheels"></div>
+    <div class="strips" id="strips"></div>
+    <div class="legend" id="legend"></div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <div class="splash" id="splash">
@@ -415,11 +470,121 @@ $("#makeLuts").onclick = async () => {
   await api.make_luts(state.exports.map(e => ({ id: e.id, name: e.name })), state.lutDir);
 };
 
+// ── accuracy map ──
+// Every test colour on the a*b* plane (grey in the centre, saturated at the rim), one wheel per lightness band,
+// coloured by how far the rebuilt look lands from the original. Outlines show what each kind of screen can display.
+const XYZ_TO_SRGB = [[3.1338561, -1.6168667, -0.4906146], [-0.9787684, 1.9161415, 0.0334540], [0.0719453, -0.2289914, 1.4052427]];
+function labToRgb(L, a, b) {
+  const fy = (L + 16) / 116, f = t => t > 6 / 29 ? t ** 3 : 3 * (6 / 29) ** 2 * (t - 4 / 29);
+  const xyz = [f(fy + a / 500) * 0.96422, f(fy), f(fy - b / 200) * 0.82521];
+  return XYZ_TO_SRGB.map(r => { const v = Math.min(1, Math.max(0, r[0] * xyz[0] + r[1] * xyz[1] + r[2] * xyz[2]));
+    return Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)); });
+}
+const rgbCss = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+const HEAT = [[0, [205, 200, 192]], [1, [205, 200, 192]], [2, [240, 200, 110]], [3.5, [232, 140, 40]], [6, [214, 60, 40]], [10, [150, 20, 40]]];
+function heat(v, fade) {
+  let c = HEAT[HEAT.length - 1][1];
+  for (let k = 1; k < HEAT.length; k++) if (v <= HEAT[k][0]) { const [a, ca] = HEAT[k - 1], [b, cb] = HEAT[k], t = b > a ? (v - a) / (b - a) : 0;
+    c = ca.map((x, i) => x + (cb[i] - x) * t); break; }
+  return rgbCss(fade ? c.map(x => Math.round(x + (255 - x) * 0.7)) : c.map(Math.round));
+}
+const GAMUT_BITS = { srgb: 1, p3: 2, adobe: 4 }, GAMUT_DASH = { srgb: [], p3: [7, 5], adobe: [1.5, 4] };
+const BAND_NAMES = [["Shadows", "lightness 0–35"], ["Midtones", "lightness 35–70"], ["Highlights", "lightness 70–100"]];
+let map = null;
+
+async function openMap(id) {
+  $("#mapview").classList.add("on");
+  $("#mapTitle").textContent = "Measuring…"; $("#mapSub").textContent = ""; $("#wheels").innerHTML = ""; $("#strips").innerHTML = ""; $("#mapKey").textContent = "";
+  map = await api.accuracy_map(id);
+  if (!map) { $("#mapTitle").textContent = "This look isn't loaded any more. Convert it again to see its map."; return; }
+  $("#mapTitle").textContent = map.name;
+  $("#mapSub").textContent = `Accuracy check · the look rebuilt for the ${map.camera} it came from, compared with the original across 40,000 colours · avg ${map.stats[0].toFixed(1)} ΔE, 95% within ${map.stats[1].toFixed(1)} ΔE`;
+  $("#wheels").innerHTML = BAND_NAMES.map(([t, s], j) => `<div class="wheel"><h4>${t}</h4><div class="sub">${s}</div><canvas data-band="${j}"></canvas>
+      <div class="foot2">avg ${map.bands[j].stats[0].toFixed(1)} ΔE · 95% within ${map.bands[j].stats[1].toFixed(1)}</div></div>`).join("")
+    + `<div class="wheel"><h4>Which way they drift</h4><div class="sub">400 of the worst 10%, lines 2× longer than life</div><canvas data-band="drift"></canvas>
+      <div class="foot2">dot = the original's colour · line points to the rebuild</div></div>`;
+  $("#strips").innerHTML = map.bands.map((b, j) => strip(b, BAND_NAMES[j][0])).join("")
+    + `<div class="read"><h5>Reading the strips</h5>Each strip runs from the original's colour to where the rebuild put it, with ticks at 1, 2 and 3.5 ΔE. The square shows the two side by side. Only colours a standard screen can show are used.</div>`;
+  $("#legend").innerHTML = "ΔE&ensp;" + [[0.5, "under 1"], [1.5, "1–2"], [2.8, "2–3.5"], [4.8, "3.5–6"], [8, "6+"]].map(([v, t]) => `<span><i style="background:${heat(v)}"></i>${t}</span>`).join("")
+    + `<span style="margin-left:auto; font-weight:400; font-style:italic">Under 2 ΔE is invisible side by side</span>`;
+  drawMap();
+}
+function strip(b, name) {
+  if (!b.strip) return `<div class="strip"><h5>${name}</h5><div class="note">No colours here a standard screen can show.</div></div>`;
+  const s = b.strip, cin = labToRgb(...s.in), cout = labToRgb(...s.out);
+  const stops = Array.from({ length: 9 }, (_, k) => rgbCss(labToRgb(...s.in.map((v, i) => v + (s.out[i] - v) * k / 8)))).join(",");
+  const ticks = [0, 1, 2, 3.5, 6].filter(v => v <= s.de).map(v => `<b style="left:${v / s.de * 100}%" data-v="${s.de - v > 0.5 || v === 0 ? v : ""}"></b>`).join("");
+  const note = s.de >= b.max - 0.05 ? "This is also the most extreme colour in this band." : `Most extreme in this band: ${b.max.toFixed(1)} ΔE, beyond a standard screen.`;
+  return `<div class="strip"><h5>${name}: worst on-screen colour <span style="color:${heat(s.de)}">${s.de.toFixed(1)} ΔE</span></h5>
+    <div class="ends"><span>original</span><span>rebuild</span></div>
+    <div class="row2"><div class="pair"><i style="background:${rgbCss(cin)}"></i><i style="background:${rgbCss(cout)}"></i></div>
+      <div class="ramp" style="background:linear-gradient(90deg,${stops})">${ticks}</div></div><div class="note">${note}</div></div>`;
+}
+function drawMap() {
+  if (!map) return;
+  const on = [...document.querySelectorAll(".toggles [data-g]")].filter(c => c.checked).map(c => c.dataset.g);
+  const bits = on.reduce((m, g) => m | GAMUT_BITS[g], 0), fade = $("#fade").checked && bits;
+  const D = map.dots, n = D.length / 5;
+  // figures for the colours inside the ticked outlines
+  if (bits) {
+    const ins = [], all = [];
+    for (let i = 0; i < n; i++) { all.push(D[i * 5 + 3]); if (D[i * 5 + 4] & bits) ins.push(D[i * 5 + 3]); }
+    const p95 = v => v.slice().sort((x, y) => x - y)[Math.floor(v.length * 0.95)] || 0;
+    const cut = p95(all); let hard = 0, hardOut = 0;
+    for (let i = 0; i < n; i++) if (D[i * 5 + 3] >= cut) { hard++; if (!(D[i * 5 + 4] & bits)) hardOut++; }
+    const names = on.map(g => ({ srgb: "sRGB", p3: "P3", adobe: "Adobe RGB" })[g]).join(" + ");
+    $("#mapKey").textContent = `Inside the outline (${names}): avg ${(ins.reduce((s, v) => s + v, 0) / Math.max(1, ins.length)).toFixed(1)} ΔE, 95% within ${p95(ins).toFixed(1)}. ${Math.round(hardOut / Math.max(1, hard) * 100)}% of the hardest 5% sit outside it.`;
+  } else $("#mapKey").textContent = "Tick an outline to see how the colours inside it compare.";
+
+  document.querySelectorAll("#wheels canvas").forEach(cv => {
+    const px = Math.round(cv.clientWidth * devicePixelRatio); cv.width = cv.height = px;
+    const g = cv.getContext("2d"), c = px / 2, R = px / 2 - px * 0.035, rim = map.rim;
+    const X = a => c + a / rim * R, Y = b => c - b / rim * R;
+    g.clearRect(0, 0, px, px);
+    for (let k = 0; k < 360; k += 2) {   // hue ring
+      const t = (k + 1) * Math.PI / 180; g.strokeStyle = rgbCss(labToRgb(62, 55 * Math.cos(t), 55 * Math.sin(t)));
+      g.lineWidth = px * 0.025; g.beginPath(); g.arc(c, c, R + px * 0.012, -(k + 2.5) * Math.PI / 180, -(k - 0.5) * Math.PI / 180); g.stroke();
+    }
+    g.strokeStyle = "#ece8e0"; g.lineWidth = 1;
+    for (const rr of [25, 50, 75, 100]) { g.beginPath(); g.arc(c, c, rr / rim * R, 0, 2 * Math.PI); g.stroke(); }
+    const dot = (a, b, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(X(a), Y(b), r, 0, 2 * Math.PI); g.fill(); };
+    const s = px / 520;
+    if (cv.dataset.band === "drift") {
+      for (let i = 0; i < map.drift.length; i += 5) {
+        const [a0, b0, a1, b1, e] = map.drift.slice(i, i + 5);
+        g.strokeStyle = heat(e); g.lineWidth = 2 * s; g.beginPath(); g.moveTo(X(a0), Y(b0)); g.lineTo(X(a0 + (a1 - a0) * 2), Y(b0 + (b1 - b0) * 2)); g.stroke();
+        dot(a0, b0, 2 * s, "#78726a");
+      }
+      return;
+    }
+    const j = +cv.dataset.band, [lo, hi] = [[0, 35], [35, 70], [70, 101]][j];
+    const idx = [];
+    for (let i = 0; i < n; i++) { const L = D[i * 5]; if (L >= lo && L < hi) idx.push(i); }
+    const inside = i => !fade || (D[i * 5 + 4] & bits);
+    idx.sort((p, q) => (inside(p) - inside(q)) || (D[p * 5 + 3] - D[q * 5 + 3]));   // faded first, worst last
+    for (const i of idx) { const e = D[i * 5 + 3]; dot(D[i * 5 + 1], D[i * 5 + 2], (e < 2 ? 1.6 : 2.6) * s, heat(e, !inside(i))); }
+    for (const gname of ["adobe", "p3", "srgb"]) {
+      if (!on.includes(gname)) continue;
+      const e = map.bands[j].edges[gname], pts = [];
+      for (let k = 0; k <= 72; k++) { const ch = Math.max(e[k % 72], 1), t = ((k % 72) * 5 + 2.5) * Math.PI / 180; pts.push([X(ch * Math.cos(t)), Y(ch * Math.sin(t))]); }
+      const path = () => { g.beginPath(); pts.forEach(([x, y], k) => k ? g.lineTo(x, y) : g.moveTo(x, y)); };
+      g.setLineDash([]); g.strokeStyle = "#fff"; g.lineWidth = 6 * s; g.lineJoin = "round"; path(); g.stroke();
+      g.setLineDash(GAMUT_DASH[gname].map(v => v * s * 1.6)); g.strokeStyle = "#1f1d1b"; g.lineWidth = 2 * s; path(); g.stroke();
+      g.setLineDash([]);
+    }
+  });
+}
+document.querySelectorAll(".toggles input").forEach(c => c.onchange = drawMap);
+$("#closeMap").onclick = () => $("#mapview").classList.remove("on");
+addEventListener("keydown", e => { if (e.key === "Escape") $("#mapview").classList.remove("on"); });
+addEventListener("resize", () => $("#mapview").classList.contains("on") && drawMap());
+
 // ── callbacks from Python ──
 window.vtg = {
   looksAdded, exportsAdded,
-  log(kind, title, sub) {
-    const el = $("#log"); el.insertAdjacentHTML("beforeend", `<div class="ev ${kind}"><span class="dot"></span><div><div class="t">${esc(title)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}</div></div>`);
+  log(kind, title, sub, mapId) {
+    const el = $("#log"); el.insertAdjacentHTML("beforeend", `<div class="ev ${kind}"><span class="dot"></span><div><div class="t">${esc(title)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ""}${mapId ? `<button class="linkish see" data-map="${esc(mapId)}">See accuracy map</button>` : ""}</div></div>`);
+    el.querySelectorAll("[data-map]").forEach(b => b.onclick = () => openMap(b.dataset.map));
     el.scrollTop = el.scrollHeight;
   },
   progress(f) { $("#bar").style.width = `${Math.round(f * 100)}%`; },

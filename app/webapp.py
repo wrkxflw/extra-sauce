@@ -16,8 +16,9 @@ from pathlib import Path
 import webview
 from webview.dom import DOMEventHandler
 
-from . import chart, converter
+from . import accuracy, chart, converter
 from .dcp import read_dcp
+from .pipeline import Profile
 
 APP_NAME = "Extra Sauce"
 MAC = sys.platform == "darwin"
@@ -59,6 +60,7 @@ class Api:
         self._cameras = converter.adobe_standard_cameras()
         self._looks: dict[str, dict] = {}       # id -> {path, name, camera, ok}
         self._exports: dict[str, Path] = {}     # id -> chart export path
+        self._sources: dict[str, converter.LookSource] = {}   # look id -> analysed look, for its accuracy map
         self._page = "cams"
         self._busy = False
 
@@ -158,6 +160,15 @@ class Api:
     def remove_look(self, lid):
         self._looks.pop(lid, None)
 
+    def accuracy_map(self, lid):
+        """Map data for a look analysed in this session (see accuracy.py)."""
+        src = self._sources.get(lid)
+        if src is None:
+            return None
+        look, std = Profile(src.path), Profile(self._cameras[src.camera])
+        return {"name": src.name, "camera": src.camera,
+                **accuracy.map_data(look, std, src.table, look.cx, look.cy)}
+
     def convert(self, ids, targets, install, copy_dir, skip):
         if self._busy:
             return False
@@ -185,8 +196,9 @@ class Api:
                     self._js("progress", step / total)
                     continue
                 grade = "excellent" if src.accuracy_mean < 1.5 else "good" if src.accuracy_mean < 3 else "rough"
+                self._sources[look["id"]] = src
                 self._js("log", "check", f"Accuracy check: {src.accuracy_mean:.1f} ΔE",
-                         f"95% of colours within {src.accuracy_p95:.1f} ΔE · {grade}")
+                         f"95% of colours within {src.accuracy_p95:.1f} ΔE · {grade}", look["id"])
                 step += 1
                 self._js("progress", step / total)
                 for cam in targets:
