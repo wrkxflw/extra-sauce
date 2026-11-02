@@ -69,7 +69,7 @@ def installed_profiles() -> dict[tuple[str, str], Path]:
 
 # VSCO tuned its per-camera versions in batches. Within a brand's latest batch (2014-18) the versions
 # agree within about 1 dE, and rebuilt from any of them a newer body lands within about 1 dE too; an
-# older batch lands 3-5 dE away. Measured against VSCO's own versions, Film 03-07 looks.
+# older batch lands 3-5 dE away. Measured against VSCO's own versions, Film 03-06 colour looks.
 LATEST_BATCH = {
     "canon": {"Canon EOS R", "Canon EOS 5D Mark IV", "Canon EOS 6D Mark II", "Canon EOS 80D", "Canon EOS 77D",
               "Canon EOS 800D", "Canon EOS 200D", "Canon EOS M5", "Canon EOS M6", "Canon EOS M100",
