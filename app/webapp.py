@@ -58,9 +58,10 @@ class Api:
         self._window = None
         self._settings = _load_settings()
         self._cameras = converter.adobe_standard_cameras()
-        self._looks: dict[str, dict] = {}       # id -> {path, name, camera, ok}
+        self._looks: dict[str, dict] = {}       # id -> {id, name, versions: {camera: path}}
+        self._next_id = 0
         self._exports: dict[str, Path] = {}     # id -> chart export path
-        self._sources: dict[str, converter.LookSource] = {}   # look id -> analysed look, for its accuracy map
+        self._sources: dict[str, converter.LookSource] = {}   # "look id|camera" -> analysed version, for its map
         self._page = "cams"
         self._busy = False
 
@@ -135,8 +136,10 @@ class Api:
                 files += sorted(q for q in path.rglob("*") if q.suffix.lower() == ".dcp")
             elif path.suffix.lower() == ".dcp":
                 files.append(path)
-        known = {l["name"] for l in self._looks.values()}
-        added, dupes, bad = [], 0, 0
+        # one entry per look; every camera's version of it is kept, since which version to convert
+        # from matters (see converter.closest_source)
+        by_name = {l["name"]: l for l in self._looks.values()}
+        added, updated, versions, same, bad = [], {}, 0, 0, 0
         for f in files:
             try:
                 info = read_dcp(f)
@@ -147,65 +150,86 @@ class Api:
             if not name or not cam:
                 bad += 1
                 continue
-            if name in known:      # same look made for another camera adds nothing
-                dupes += 1
+            look = by_name.get(name)
+            if look is None:
+                look = {"id": f"l{self._next_id}", "name": name, "versions": {}}
+                self._next_id += 1
+                self._looks[look["id"]] = by_name[name] = look
+                added.append(look)
+            if cam in look["versions"]:
+                same += 1
                 continue
-            known.add(name)
-            lid = f"l{len(self._looks)}_{abs(hash(str(f))) % 10**6}"
-            look = {"id": lid, "path": str(f), "name": name, "camera": cam, "ok": cam in self._cameras}
-            self._looks[lid] = look
-            added.append(look)
-        return {"added": added, "dupes": dupes, "bad": bad, "seen": len(files)}
+            look["versions"][cam] = str(f)
+            versions += 1
+            if look not in added:
+                updated[look["id"]] = look
+        return {"added": [self._public(l) for l in added], "updated": [self._public(l) for l in updated.values()],
+                "versions": versions, "dupes": same, "bad": bad, "seen": len(files)}
+
+    def _public(self, look):
+        cams = sorted(look["versions"], key=str.lower)
+        return {"id": look["id"], "name": look["name"], "cameras": cams,
+                "ok": any(c in self._cameras for c in cams)}
+
+    def _pick(self, look, target, source):
+        """Which camera's version of the look to convert from for this target."""
+        usable = [c for c in look["versions"] if c in self._cameras]
+        return source if source in usable else converter.closest_source(target, usable)
 
     def remove_look(self, lid):
         self._looks.pop(lid, None)
 
-    def accuracy_map(self, lid):
-        """Map data for a look analysed in this session (see accuracy.py)."""
-        src = self._sources.get(lid)
+    def accuracy_map(self, key):
+        """Map data for a look version analysed in this session (see accuracy.py)."""
+        src = self._sources.get(key)
         if src is None:
             return None
         look, std = Profile(src.path), Profile(self._cameras[src.camera])
         return {"name": src.name, "camera": src.camera,
                 **accuracy.map_data(look, std, src.table, look.cx, look.cy)}
 
-    def convert(self, ids, targets, install, copy_dir, skip):
+    def convert(self, ids, targets, install, copy_dir, skip, source=""):
         if self._busy:
             return False
-        looks = [self._looks[i] for i in ids if i in self._looks and self._looks[i]["ok"]]
+        looks = [self._looks[i] for i in ids if i in self._looks and self._public(self._looks[i])["ok"]]
         self.save_settings({"install": install, "copy": bool(copy_dir), "skip": skip, "targets": targets,
                             **({"copyDir": copy_dir} if copy_dir else {})})
         self._busy = True
-        threading.Thread(target=self._convert, args=(looks, targets, install, copy_dir, skip), daemon=True).start()
+        threading.Thread(target=self._convert, args=(looks, targets, install, copy_dir, skip, source), daemon=True).start()
         return True
 
-    def _convert(self, looks, targets, install, copy_dir, skip):
+    def _convert(self, looks, targets, install, copy_dir, skip, source):
         made = skipped = failed = 0
-        total = max(1, len(looks) * (1 + len(targets)))
+        plans = [{t: self._pick(l, t, source) for t in targets if t not in l["versions"]} for l in looks]
+        total = max(1, sum(len(set(p.values())) + len(targets) for p in plans))
         step = 0
         copy_path = Path(copy_dir) if copy_dir else None
         try:
-            for look in looks:
-                self._js("log", "info", f"Analysing {look['name']}", f"made for {look['camera']}")
-                try:
-                    src = converter.prepare(Path(look["path"]), self._cameras)
-                except Exception as e:
-                    self._js("log", "error", f"Couldn't analyse {look['name']}", str(e))
-                    failed += 1
-                    step += 1 + len(targets)
+            for look, plan in zip(looks, plans):
+                srcs = {}
+                for cam in sorted(set(plan.values()), key=str.lower):
+                    self._js("log", "info", f"Analysing {look['name']}", f"the version made for {cam}")
+                    try:
+                        src = srcs[cam] = converter.prepare(Path(look["versions"][cam]), self._cameras)
+                    except Exception as e:
+                        self._js("log", "error", f"Couldn't analyse {look['name']} ({cam})", str(e))
+                        failed += 1
+                    else:
+                        grade = "excellent" if src.accuracy_mean < 1.5 else "good" if src.accuracy_mean < 3 else "rough"
+                        key = f"{look['id']}|{cam}"
+                        self._sources[key] = src
+                        self._js("log", "check", f"Accuracy check: {src.accuracy_mean:.1f} ΔE",
+                                 f"95% of colours within {src.accuracy_p95:.1f} ΔE · {grade}", key)
+                    step += 1
                     self._js("progress", step / total)
-                    continue
-                grade = "excellent" if src.accuracy_mean < 1.5 else "good" if src.accuracy_mean < 3 else "rough"
-                self._sources[look["id"]] = src
-                self._js("log", "check", f"Accuracy check: {src.accuracy_mean:.1f} ΔE",
-                         f"95% of colours within {src.accuracy_p95:.1f} ΔE · {grade}", look["id"])
-                step += 1
-                self._js("progress", step / total)
                 for cam in targets:
-                    fname = converter.safe_filename(f"{cam} {src.name}.dcp")
-                    if cam == src.camera:
-                        self._js("log", "skip", cam, "the camera the original was made for")
+                    fname = converter.safe_filename(f"{cam} {look['name']}.dcp")
+                    src = srcs.get(plan.get(cam))
+                    if cam in look["versions"]:
+                        self._js("log", "skip", cam, "the pack already has a version for this camera")
                         skipped += 1
+                    elif src is None:
+                        failed += 1
                     elif skip and (existing := converter.existing_profile(cam, src.name)):
                         self._js("log", "skip", cam, f"already has it ({existing.parent.name})")
                         skipped += 1
@@ -215,7 +239,7 @@ class Api:
                                 converter.write_profile(src, self._cameras[cam], converter.INSTALL_DIR / fname)
                             if copy_path:
                                 converter.write_profile(src, self._cameras[cam], copy_path / fname)
-                            self._js("log", "ok", cam, src.name)
+                            self._js("log", "ok", cam, f"{src.name} · from the {src.camera} version")
                             made += 1
                         except Exception as e:
                             self._js("log", "error", cam, str(e))

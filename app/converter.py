@@ -5,6 +5,7 @@ Standard, then laid over each target camera's Adobe Standard calibration.
 """
 from __future__ import annotations
 
+import difflib
 import os
 import sys
 import re
@@ -59,6 +60,22 @@ def existing_profile(model: str, profile_name: str) -> Path | None:
             if f.lower() == target:
                 return Path(root) / f
     return None
+
+
+def closest_source(target: str, cameras: list[str]) -> str:
+    """Default pick of which version of a look to convert from: same brand, then the nearest model name.
+
+    A pack's versions of one look can differ a lot between cameras of one brand, and nothing in the
+    camera data predicts which suits a camera the pack never covered, so this is only a starting
+    point; the user can choose the source camera instead.
+    """
+    brand = target.split()[0].lower()
+    same = [c for c in cameras if c.split()[0].lower() == brand] or cameras
+    t = target.lower()
+    num = lambda s: int((re.findall(r"\d+", s.split(maxsplit=1)[-1]) or [0])[0])
+    return max(same, key=lambda c: (len(os.path.commonprefix([c.lower(), t])),
+                                    round(difflib.SequenceMatcher(None, c.lower(), t).ratio(), 3),
+                                    -abs(num(c) - num(target)), c))
 
 
 def safe_filename(s: str) -> str:

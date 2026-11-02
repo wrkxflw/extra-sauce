@@ -25,7 +25,10 @@ Get it from [wrkxflw.github.io/extra-sauce](https://wrkxflw.github.io/extra-sauc
 ## Camera profiles
 
 1. Drop look profiles into **Your looks**, or use Add files / Folder. You can drop a whole folder of them. If
-   a look was made for several cameras, you only need one copy; extra copies are skipped.
+   a look was made for several cameras, add as many versions as you like: each camera you convert to is built
+   from the version made for the nearest model (a D750 version for a D780, say), or pick the source camera
+   under **Convert from the version made for**. Versions of one look can differ a lot between cameras of the
+   same brand, so the source matters.
 2. Search for the cameras you want under **New cameras** and tick as many as you like.
 3. Choose where the profiles go:
    - **Install into Lightroom** writes to

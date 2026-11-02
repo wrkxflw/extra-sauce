@@ -146,6 +146,7 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
 .out { grid-column: 1 / -1; flex-direction: row; align-items: stretch; }
 .opts { flex: 1; padding: 16px 20px; display: grid; gap: 10px; align-content: center; }
 .opt { display: flex; align-items: center; gap: 12px; }
+.opt[hidden] { display: none; }
 .switch { width: 38px; height: 22px; border-radius: 999px; background: #dcd9d0; position: relative; cursor: pointer; flex: none; transition: background .15s; border: 0; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform .15s; }
@@ -153,6 +154,8 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
 .switch.on::after { transform: translateX(16px); }
 .opt .label { font-size: 12.5px; }
 .opt .hint { color: var(--faint); font-size: 11.5px; }
+.opt select { font: inherit; font-size: 12px; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 7px; padding: 4px 8px; min-width: 0; max-width: 260px; }
 .path { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .path code { font: 400 11.5px/1.3 Consolas, monospace; color: var(--muted); background: var(--panel); border-radius: 7px;
   padding: 5px 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -280,6 +283,8 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
         <div class="opt"><button class="switch" id="swCopy"></button><span class="label">Save copies to</span>
           <div class="path"><code id="copyDir"></code><button class="linkish" id="browseCopy">Change</button></div></div>
         <div class="opt"><button class="switch" id="swSkip"></button><span class="label">Skip cameras that already have the look</span></div>
+        <div class="opt" id="srcOpt" hidden><span class="label">Convert from the version made for</span>
+          <select id="source" title="Looks with versions for several cameras: which camera's version to convert from. The nearest model is a starting point; a different source camera can work better."></select></div>
       </div>
       <div class="go">
         <div class="summary" id="summary">Add a look and pick a camera.</div>
@@ -364,7 +369,7 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const FILM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="9" height="13" rx="1.5"/><path d="M6 6V4h5v2M13 10h7v6h-7"/></svg>';
-const state = { cameras: [], looks: [], targets: new Set(), exports: [], install: true, copy: true, skip: true, copyDir: "", lutDir: "", busy: false };
+const state = { cameras: [], looks: [], source: "", targets: new Set(), exports: [], install: true, copy: true, skip: true, copyDir: "", lutDir: "", busy: false };
 let api;
 
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2600); }
@@ -386,17 +391,28 @@ function renderLooks() {
   el.innerHTML = state.looks.length ? state.looks.map(l => `
     <div class="row">
       <div class="film">${FILM}</div>
-      <div class="main"><div class="name">${esc(l.name)}</div><div class="sub">made for ${esc(l.camera)}</div></div>
+      <div class="main"><div class="name">${esc(l.name)}</div><div class="sub" title="${esc(l.cameras.join(", "))}">${l.cameras.length > 1 ? `${l.cameras.length} camera versions` : `made for ${esc(l.cameras[0])}`}</div></div>
       ${l.ok ? '<span class="pill ok">Ready</span>' : '<span class="pill err" title="No Adobe Standard profile for this camera on this computer">Can\'t measure</span>'}
       <button class="x" data-id="${l.id}" title="Remove">×</button>
     </div>`).join("") : '<div class="empty"><b>No looks yet</b></div>';
   el.querySelectorAll(".x").forEach(b => b.onclick = () => { api.remove_look(b.dataset.id); state.looks = state.looks.filter(l => l.id !== b.dataset.id); renderLooks(); });
-  updateSummary();
+  renderSource(); updateSummary();
 }
+// looks with versions for several cameras: one choice of source camera for the batch
+function renderSource() {
+  const cams = [...new Set(state.looks.filter(l => l.cameras.length > 1).flatMap(l => l.cameras))].filter(c => state.cameras.includes(c)).sort((a, b) => a.localeCompare(b));
+  $("#srcOpt").hidden = !cams.length;
+  if (!cams.includes(state.source)) state.source = "";
+  $("#source").innerHTML = `<option value="">Nearest model to each camera</option>` + cams.map(c => `<option${c === state.source ? " selected" : ""}>${esc(c)}</option>`).join("");
+}
+$("#source").onchange = e => state.source = e.target.value;
 function looksAdded(r) {
-  state.looks.push(...r.added); renderLooks();
+  state.looks.push(...r.added);
+  r.updated.forEach(u => { const i = state.looks.findIndex(l => l.id === u.id); if (i >= 0) state.looks[i] = u; });
+  renderLooks();
   let msg = `Added ${r.added.length} look${r.added.length === 1 ? "" : "s"}`;
-  if (r.dupes) msg += ` · skipped ${r.dupes} duplicate${r.dupes === 1 ? "" : "s"}`;
+  if (r.versions > r.added.length) msg += ` · ${r.versions} camera versions`;
+  if (r.dupes) msg += ` · ${r.dupes} already added`;
   if (r.bad) msg += ` · ${r.bad} unreadable`;
   if (r.seen) toast(msg);
 }
@@ -440,7 +456,7 @@ $("#convert").onclick = async () => {
   state.busy = true; $("#convert").disabled = true; $("#bar").style.width = "0";
   $("#log").innerHTML = ""; $("#drawer").classList.add("on");
   $("#summary").textContent = "Converting…";
-  await api.convert(state.looks.filter(l => l.ok).map(l => l.id), [...state.targets], state.install, state.copy ? state.copyDir : "", state.skip);
+  await api.convert(state.looks.filter(l => l.ok).map(l => l.id), [...state.targets], state.install, state.copy ? state.copyDir : "", state.skip, state.source);
 };
 $("#showLog").onclick = () => $("#drawer").classList.toggle("on");
 $("#closeLog").onclick = () => $("#drawer").classList.remove("on");
