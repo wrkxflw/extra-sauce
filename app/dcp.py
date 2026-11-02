@@ -13,6 +13,16 @@ TAGS = {
     52552: "ProfileGroupName",
 }
 SIZES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8}
+# text tags; non-ASCII names (e.g. VSCO's "400H⁺¹") are stored as UTF-8, often as BYTE rather than ASCII
+TEXT = {50708, 50936, 50942, 52552}
+
+
+def _text(raw):
+    raw = raw.split(b"\0")[0]
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("latin1")
 
 
 def read_dcp(path):
@@ -25,8 +35,8 @@ def read_dcp(path):
         tag, typ, cnt, val = struct.unpack_from("<HHII", b, off + 2 + 12 * i)
         size = SIZES[typ] * cnt
         p = off + 2 + 12 * i + 8 if size <= 4 else val
-        if typ == 2:
-            v = b[p:p + cnt].split(b"\0")[0].decode("latin1")
+        if typ == 2 or (typ in (1, 7) and tag in TEXT):
+            v = _text(b[p:p + cnt])
         elif typ == 3:
             v = np.frombuffer(b, "<u2", cnt, p)
         elif typ in (4, 9):

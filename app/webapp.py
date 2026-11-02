@@ -205,6 +205,7 @@ class Api:
         step = 0
         copy_path = Path(copy_dir) if copy_dir else None
         try:
+            installed = converter.installed_profiles() if skip else {}
             for look, plan in zip(looks, plans):
                 srcs = {}
                 for cam in sorted(set(plan.values()), key=str.lower):
@@ -230,7 +231,7 @@ class Api:
                         skipped += 1
                     elif src is None:
                         failed += 1
-                    elif skip and (existing := converter.existing_profile(cam, src.name)):
+                    elif skip and (existing := installed.get((cam, src.name))):
                         self._js("log", "skip", cam, f"already has it ({existing.parent.name})")
                         skipped += 1
                     else:

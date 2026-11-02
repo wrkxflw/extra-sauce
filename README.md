@@ -26,9 +26,10 @@ Get it from [wrkxflw.github.io/extra-sauce](https://wrkxflw.github.io/extra-sauc
 
 1. Drop look profiles into **Your looks**, or use Add files / Folder. You can drop a whole folder of them. If
    a look was made for several cameras, add as many versions as you like: each camera you convert to is built
-   from the version made for the nearest model (a D750 version for a D780, say), or pick the source camera
-   under **Convert from the version made for**. Versions of one look can differ a lot between cameras of the
-   same brand, so the source matters.
+   from the best-matching version, or pick the source camera under **Convert from the version made for**.
+   VSCO tuned its per-camera versions in batches; within each brand the latest batch (2014-18 bodies such as
+   the EOS R, Z 6 / D850, a7 III and X-T3) agrees within about 1 ΔE, while older batches land 3-5 ΔE away, so
+   Extra Sauce converts from the latest batch, nearest model first (a D750 version for a D780, say).
 2. Search for the cameras you want under **New cameras** and tick as many as you like.
 3. Choose where the profiles go:
    - **Install into Lightroom** writes to

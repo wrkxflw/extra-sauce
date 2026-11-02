@@ -284,7 +284,7 @@ body.dragging .page.on .drop { background: #f7e8c0; border-color: var(--gold); t
           <div class="path"><code id="copyDir"></code><button class="linkish" id="browseCopy">Change</button></div></div>
         <div class="opt"><button class="switch" id="swSkip"></button><span class="label">Skip cameras that already have the look</span></div>
         <div class="opt" id="srcOpt" hidden><span class="label">Convert from the version made for</span>
-          <select id="source" title="Looks with versions for several cameras: which camera's version to convert from. The nearest model is a starting point; a different source camera can work better."></select></div>
+          <select id="source" title="Looks with versions for several cameras: which camera's version to convert from. By default each camera gets the version from the pack's latest batch, nearest model first."></select></div>
       </div>
       <div class="go">
         <div class="summary" id="summary">Add a look and pick a camera.</div>
@@ -403,7 +403,7 @@ function renderSource() {
   const cams = [...new Set(state.looks.filter(l => l.cameras.length > 1).flatMap(l => l.cameras))].filter(c => state.cameras.includes(c)).sort((a, b) => a.localeCompare(b));
   $("#srcOpt").hidden = !cams.length;
   if (!cams.includes(state.source)) state.source = "";
-  $("#source").innerHTML = `<option value="">Nearest model to each camera</option>` + cams.map(c => `<option${c === state.source ? " selected" : ""}>${esc(c)}</option>`).join("");
+  $("#source").innerHTML = `<option value="">Best match for each camera</option>` + cams.map(c => `<option${c === state.source ? " selected" : ""}>${esc(c)}</option>`).join("");
 }
 $("#source").onchange = e => state.source = e.target.value;
 function looksAdded(r) {

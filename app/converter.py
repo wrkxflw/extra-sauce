@@ -27,7 +27,7 @@ else:
     USER_PROFILES_DIR = Path(os.environ.get("APPDATA", "")) / "Adobe/CameraRaw/CameraProfiles"
 INSTALL_DIR = USER_PROFILES_DIR / "Generated Profiles"
 
-ASCII, LONG, FLOAT = 2, 4, 11
+BYTE, ASCII, LONG, FLOAT = 1, 2, 4, 11
 _STD_RE = re.compile(r"^(?P<model>.+?) Adobe Standard(?P<v2> v2)?\.dcp$", re.I)
 
 
@@ -48,29 +48,50 @@ def adobe_standard_cameras() -> dict[str, Path]:
     return found
 
 
-def existing_profile(model: str, profile_name: str) -> Path | None:
-    """A profile with this name already installed for this camera (e.g. the original maker's own)."""
+def installed_profiles() -> dict[tuple[str, str], Path]:
+    """(camera, profile name) -> file, for profiles installed outside our own folder (e.g. the original
+    maker's). Read from inside each file: names like "400H⁺¹" don't match their file names."""
+    found: dict[tuple[str, str], Path] = {}
     if not USER_PROFILES_DIR.is_dir():
-        return None
-    target = f"{model} {profile_name}.dcp".lower()
+        return found
     for root, _dirs, files in os.walk(USER_PROFILES_DIR):
         if Path(root) == INSTALL_DIR:
             continue
         for f in files:
-            if f.lower() == target:
-                return Path(root) / f
-    return None
+            if f.lower().endswith(".dcp"):
+                try:
+                    info = read_dcp(Path(root) / f)
+                except Exception:
+                    continue
+                found.setdefault((info.get("UniqueCameraModel"), info.get("ProfileName")), Path(root) / f)
+    return found
+
+
+# VSCO tuned its per-camera versions in batches. Within a brand's latest batch (2014-18) the versions
+# agree within about 1 dE, and rebuilt from any of them a newer body lands within about 1 dE too; an
+# older batch lands 3-5 dE away. Measured against VSCO's own versions, Film 03-07 looks.
+LATEST_BATCH = {
+    "canon": {"Canon EOS R", "Canon EOS 5D Mark IV", "Canon EOS 6D Mark II", "Canon EOS 80D", "Canon EOS 77D",
+              "Canon EOS 800D", "Canon EOS 200D", "Canon EOS M5", "Canon EOS M6", "Canon EOS M100",
+              "Canon EOS-1D X Mark II", "Canon EOS 7D Mark II", "Canon EOS 750D", "Canon EOS 760D", "Canon EOS 1300D",
+              "Canon EOS 1500D", "Canon PowerShot G3 X", "Canon PowerShot G7 X", "Canon PowerShot G7 X Mark II",
+              "Canon PowerShot G9 X"},
+    "nikon": {"Nikon Z 6", "Nikon D850", "Nikon D750", "Nikon D5", "Nikon D500", "Nikon D7500", "Nikon D5600",
+              "Nikon D5500", "Nikon D3500"},
+    "sony": {"Sony ILCE-7M3", "Sony ILCE-7RM3", "Sony ILCE-9", "Sony ILCE-7RM2", "Sony ILCE-6300", "Sony ILCE-6500",
+             "Sony DSC-RX100M6", "Sony DSC-RX1RM2", "Sony ILCA-99M2", "Sony ILCA-68"},
+    "fujifilm": {"Fujifilm X-T3", "Fujifilm X-H1", "Fujifilm X-T2", "Fujifilm X-T20", "Fujifilm X-Pro2", "Fujifilm X-E3",
+                 "Fujifilm X100F", "Fujifilm GFX 50S", "Fujifilm X-E2S", "Fujifilm X70", "Fujifilm X30",
+                 "Fujifilm X-A2", "Fujifilm X-A3", "Fujifilm X-A10"},
+}
 
 
 def closest_source(target: str, cameras: list[str]) -> str:
-    """Default pick of which version of a look to convert from: same brand, then the nearest model name.
-
-    A pack's versions of one look can differ a lot between cameras of one brand, and nothing in the
-    camera data predicts which suits a camera the pack never covered, so this is only a starting
-    point; the user can choose the source camera instead.
-    """
+    """Default pick of which version of a look to convert from: same brand, the brand's latest batch
+    where the look has versions in it, then the nearest model name. The user can choose instead."""
     brand = target.split()[0].lower()
     same = [c for c in cameras if c.split()[0].lower() == brand] or cameras
+    same = [c for c in same if c in LATEST_BATCH.get(brand, ())] or same
     t = target.lower()
     num = lambda s: int((re.findall(r"\d+", s.split(maxsplit=1)[-1]) or [0])[0])
     return max(same, key=lambda c: (len(os.path.commonprefix([c.lower(), t])),
@@ -148,6 +169,13 @@ def write_profile(src: LookSource, target_std: Path, out_path: Path, profile_nam
     entries[51108] = (LONG, 1, struct.pack("<I", 1))                     # look table uses sRGB value encoding
     tc = src.tone.astype("<f4")
     entries[50940] = (FLOAT, tc.size, tc.tobytes())
+    # exposure offset: some packs set one per camera alongside the tone curve (e.g. -0.25 EV); it sits
+    # outside the colour tables, so carry it over with the curve
+    beo = _raw_entries(src.path).get(51109)
+    if beo:
+        entries[51109] = beo
+    else:
+        entries.pop(51109, None)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     _write_dcp(out_path, entries)
 
@@ -172,8 +200,13 @@ def _raw_entries(path: Path) -> dict:
 
 
 def _ascii(s: str):
-    data = s.encode("latin1", "replace") + b"\0"
-    return (ASCII, len(data), data)
+    """A text tag. Non-ASCII names go out as UTF-8 bytes, the way the originals store them, so presets
+    asking for the exact name still find the converted profile."""
+    if s.isascii():
+        data = s.encode("ascii") + b"\0"
+        return (ASCII, len(data), data)
+    data = s.encode("utf-8") + b"\0"
+    return (BYTE, len(data), data)
 
 
 def _write_dcp(path: Path, entries: dict) -> None:
