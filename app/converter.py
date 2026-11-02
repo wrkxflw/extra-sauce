@@ -16,7 +16,7 @@ import numpy as np
 
 from .dcp import read_dcp
 from .pipeline import ACR3, XYZ_TO_PP, Profile, lab
-from .transfer import LOOK_DIMS, Transferred, build_look
+from .transfer import LOOK_DIMS, Transferred, build_look, fit_look
 
 if sys.platform == "darwin":
     ADOBE_STANDARD_DIR = Path("/Library/Application Support/Adobe/CameraRaw/CameraProfiles/Adobe Standard")
@@ -99,6 +99,7 @@ def prepare(look_path: Path, cameras: dict[str, Path] | None = None) -> LookSour
                               "so there's nothing to measure the look against.")
     look, std = Profile(look_path), Profile(cameras[camera])
     table, resid = build_look(look, std)
+    table = fit_look(look, std, table)
     tone = info.get("ProfileToneCurve")
     if tone is None:   # profile relies on Adobe's default curve: write it out explicitly
         tone = np.stack([np.linspace(0, 1, len(ACR3)), ACR3], -1).ravel()

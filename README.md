@@ -46,7 +46,9 @@ Adobe Standard's calibration:
 
     T = look's LookTable ∘ look's HueSatMap ∘ (Adobe Standard HueSatMap)⁻¹
 
-T is sampled into a 90×25×16 LookTable with sRGB value encoding. The new profile is the target camera's Adobe
+T is sampled into a 90×25×16 LookTable with sRGB value encoding, then refined by fitting: across 200,000 sample
+colours, the table is adjusted until Adobe Standard plus the table reproduces the original profile's own output
+(a sparse least-squares fit, damped so rarely reached parts of the table stay put). The new profile is the target camera's Adobe
 Standard profile (its matrices and calibration) with T as its LookTable and the look's own tone curve.
 
 **Accuracy check:** the look is rebuilt for its own camera and compared with the original across 40,000

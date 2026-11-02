@@ -2,7 +2,8 @@
 
 new_profile(dst) = dst matrices -> dst Adobe Standard HueSatMap (calibration)
                    -> T (new LookTable) -> source look's tone curve
-where T = srcLook . srcHSM . (srcStdHSM)^-1 is sampled on an HSV grid.
+where T = srcLook . srcHSM . (srcStdHSM)^-1 is sampled on an HSV grid,
+then refined by fitting it directly against the look's own output (fit_look).
 """
 import numpy as np
 from .pipeline import PP_TO_XYZ, XYZ_TO_PP, hsd_apply, hsv2rgb, rgb2hsv, rgb_tone
@@ -83,6 +84,63 @@ def fill_unreachable(table, valid, iters=3000):
                + p[1:-1, :-2, 1:-1] + p[1:-1, 1:-1, 2:] + p[1:-1, 1:-1, :-2]) / 6
         table[bad] = avg[bad]
     return table
+
+
+def _corners(h, s, v, dims):
+    """Flat node indices (N, 8) and trilinear weights (N, 8), matching hsd_apply with sRGB value encoding."""
+    nh, ns, nv = dims
+    hs, ss, vs = h * (nh / 6.0), s * (ns - 1), srgb_enc(v) * (nv - 1)
+    h0 = np.clip(np.floor(hs).astype(int), 0, nh - 1)
+    h1 = (h0 + 1) % nh
+    s0 = np.clip(np.floor(ss).astype(int), 0, ns - 2)
+    v0 = np.clip(np.floor(vs).astype(int), 0, nv - 2)
+    hf, sf, vf = hs - h0, ss - s0, vs - v0
+    idx, w = [], []
+    for vi, vw in ((v0, 1 - vf), (v0 + 1, vf)):
+        for hi, hw in ((h0, 1 - hf), (h1, hf)):
+            for si, sw in ((s0, 1 - sf), (s0 + 1, sf)):
+                idx.append((vi * nh + hi) * ns + si)
+                w.append(vw * hw * sw)
+    return np.stack(idx, -1), np.clip(np.stack(w, -1), 0, None)
+
+
+def fit_look(src_look, src_std, table, dims=LOOK_DIMS, n=200000, iters=80, damp=2.0, seed=11):
+    """Refine the extracted table so Adobe Standard + table reproduces the look's own output.
+
+    The look stage's input (Adobe Standard's matrices + calibration) and the colour it should produce
+    (the original profile before its tone curve) are both known for each sample, so every sample asks for a
+    hue shift / sat scale / val scale at its spot in the table. Those are a sparse linear least-squares
+    problem in the table nodes, solved by iterative back-projection. `damp` keeps nodes the samples barely
+    reach close to the extracted table, so cameras that land there aren't thrown off.
+    """
+    cam = np.random.default_rng(seed).random((n, 3)) ** 2.2
+    pl, ps = cam @ (XYZ_TO_PP @ src_look.fm).T, cam @ (XYZ_TO_PP @ src_std.fm).T
+    sc = max(pl.max(), ps.max(), 1.0)
+    want = np.clip(src_look.render(pl / sc, tone=False), 0, 1)
+    h, s, v = rgb2hsv(np.clip(stage_hsm(src_std, ps / sc), 0, 1))
+    th, ts, tv = rgb2hsv(want)
+    keep = v > 1e-4
+    h, s, v, th, ts, tv = h[keep], s[keep], v[keep], th[keep], ts[keep], tv[keep]
+    req = np.stack([((th - h + 3) % 6 - 3) * 60.0,
+                    np.where(s > 1e-3, ts / np.maximum(s, 1e-3), 1.0),
+                    srgb_enc(tv) / np.maximum(srgb_enc(v), 1e-6)], -1)
+    imp = np.stack([s * v, s * np.sqrt(v), np.ones_like(v)], -1)   # hue only shows with chroma, sat with brightness
+    idx, w = _corners(h, s, v, dims)
+    nh, ns, nv = dims
+    T = table.reshape(-1, 3).astype(np.float64)                  # (v, h, s) order, flattened
+    wsum = np.zeros_like(T)
+    for k in range(3):
+        np.add.at(wsum[:, k], idx.ravel(), (w * imp[:, k:k + 1]).ravel())
+    lam = damp * np.array([np.median(wsum[wsum[:, k] > 0, k]) for k in range(3)])
+    for _ in range(iters):
+        r = req - np.einsum("nk,nkc->nc", w, T[idx])
+        r[:, 0] = (r[:, 0] + 180) % 360 - 180
+        upd = np.zeros_like(T)
+        for k in range(3):
+            np.add.at(upd[:, k], idx.ravel(), (w * (imp[:, k] * r[:, k])[:, None]).ravel())
+        T += upd / (wsum + lam)
+        T[:, 1:] = np.clip(T[:, 1:], 0.0, 4.0)
+    return T.reshape(nv, nh, ns, 3).astype(np.float32)
 
 
 class Transferred:

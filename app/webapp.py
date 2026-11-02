@@ -186,7 +186,7 @@ class Api:
                     continue
                 grade = "excellent" if src.accuracy_mean < 1.5 else "good" if src.accuracy_mean < 3 else "rough"
                 self._js("log", "check", f"Accuracy check: {src.accuracy_mean:.1f} ΔE",
-                         f"{src.accuracy_p95:.1f} ΔE on the hardest 5% of colours · {grade}")
+                         f"95% of colours within {src.accuracy_p95:.1f} ΔE · {grade}")
                 step += 1
                 self._js("progress", step / total)
                 for cam in targets:
