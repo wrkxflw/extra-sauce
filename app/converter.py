@@ -19,11 +19,17 @@ from .dcp import read_dcp
 from .pipeline import ACR3, XYZ_TO_PP, Profile, lab
 from .transfer import LOOK_DIMS, Transferred, build_look, fit_look
 
+# Adobe Standard profiles: Camera Raw (Photoshop, Bridge) installs them in a shared folder, but Lightroom
+# Classic on its own keeps them inside its program folder, so look in both
 if sys.platform == "darwin":
     ADOBE_STANDARD_DIR = Path("/Library/Application Support/Adobe/CameraRaw/CameraProfiles/Adobe Standard")
+    _APP_STANDARD_GLOBS = [(Path("/Applications"), "Adobe*/*.app/Contents/Resources/CameraProfiles/Adobe Standard"),
+                           (Path("/Applications"), "Adobe*/*.app/Contents/Resources/*/CameraProfiles/Adobe Standard")]
     USER_PROFILES_DIR = Path.home() / "Library/Application Support/Adobe/CameraRaw/CameraProfiles"
 else:
     ADOBE_STANDARD_DIR = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "Adobe/CameraRaw/CameraProfiles/Adobe Standard"
+    _APP_STANDARD_GLOBS = [(Path(os.environ.get(v, d)) / "Adobe", "*/Resources/CameraProfiles/Adobe Standard")
+                           for v, d in (("PROGRAMFILES", r"C:\Program Files"), ("PROGRAMW6432", r"C:\Program Files"))]
     USER_PROFILES_DIR = Path(os.environ.get("APPDATA", "")) / "Adobe/CameraRaw/CameraProfiles"
 INSTALL_DIR = USER_PROFILES_DIR / "Generated Profiles"
 
@@ -33,18 +39,36 @@ _STD_RE = re.compile(r"^(?P<model>.+?) Adobe Standard(?P<v2> v2)?\.dcp$", re.I)
 
 # ---- finding profiles ----------------------------------------------------------
 
-def adobe_standard_cameras() -> dict[str, Path]:
-    """Camera model -> its Adobe Standard profile (the original version where both exist)."""
+def adobe_standard_dirs(extra: str | None = None) -> list[Path]:
+    """Folders holding Adobe Standard profiles, in order of preference: one the user chose, Camera Raw's
+    shared folder, then the copies bundled with Adobe apps (Lightroom Classic)."""
+    dirs = [Path(extra)] if extra else []
+    dirs.append(ADOBE_STANDARD_DIR)
+    for base, pattern in _APP_STANDARD_GLOBS:
+        if base.is_dir():
+            dirs += sorted(base.glob(pattern))
+    out = []
+    for d in dirs:
+        if d.is_dir() and d not in out:
+            out.append(d)
+    return out
+
+
+def adobe_standard_cameras(extra: str | None = None) -> dict[str, Path]:
+    """Camera model -> its Adobe Standard profile (the original version where both exist). The first
+    folder that has a camera wins."""
     found: dict[str, Path] = {}
-    if not ADOBE_STANDARD_DIR.is_dir():
-        return found
-    for p in sorted(ADOBE_STANDARD_DIR.glob("*.dcp")):
-        m = _STD_RE.match(p.name)
-        if not m:
-            continue
-        model = m.group("model")
-        if model not in found or not m.group("v2"):
-            found[model] = p
+    for d in adobe_standard_dirs(extra):
+        here: dict[str, Path] = {}
+        for p in sorted(d.glob("*.dcp")):
+            m = _STD_RE.match(p.name)
+            if not m:
+                continue
+            model = m.group("model")
+            if model not in here or not m.group("v2"):
+                here[model] = p
+        for model, p in here.items():
+            found.setdefault(model, p)
     return found
 
 

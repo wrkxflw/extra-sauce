@@ -430,12 +430,25 @@ function renderCams() {
   $("#camList").innerHTML = hits.slice(0, LIMIT).map(c => { const [b, m] = brandSplit(c);
       return `<div class="cam ${state.targets.has(c) ? "on" : ""}" data-c="${esc(c)}"><span class="box"></span><span><span class="brand">${esc(b)}</span>${esc(m)}</span></div>`; }).join("")
     + (hits.length > LIMIT ? `<div class="more">+${hits.length - LIMIT}</div>` : "")
-    + (!hits.length ? '<div class="empty"><b>No match</b></div>' : "");
+    + (!state.cameras.length ? `<div class="empty"><b>No Adobe Standard profiles found</b>They come with Lightroom Classic or Camera Raw.
+        If one is installed, show Extra Sauce where its profiles are.<div><button class="btn ghost" id="pickStd" style="margin-top:12px">Choose folder</button></div></div>`
+      : !hits.length ? '<div class="empty"><b>No match</b></div>' : "");
+  if ($("#pickStd")) $("#pickStd").onclick = pickStandard;
   $("#camList").querySelectorAll(".cam").forEach(r => r.onclick = () => { toggleCam(r.dataset.c); });
   $("#chips").innerHTML = [...state.targets].sort().map(c => `<span class="chip">${esc(c)}<button data-c="${esc(c)}">×</button></span>`).join("");
   $("#chips").querySelectorAll("button").forEach(b => b.onclick = () => toggleCam(b.dataset.c));
   $("#chips").style.display = state.targets.size ? "" : "none";
   updateSummary();
+}
+async function pickStandard() {
+  const r = await api.pick_standard_folder();
+  if (!r) return;
+  if (!r.found) return toast("No Adobe Standard profiles in that folder");
+  state.cameras = r.cameras;
+  const ok = Object.fromEntries(r.looks.map(l => [l.id, l.ok]));
+  state.looks.forEach(l => { if (l.id in ok) l.ok = ok[l.id]; });
+  renderLooks(); renderCams(); renderSource();
+  toast(`Found ${r.found} cameras`);
 }
 function toggleCam(c) { state.targets.has(c) ? state.targets.delete(c) : state.targets.add(c); persist(); renderCams(); }
 $("#q").oninput = renderCams;
@@ -638,7 +651,6 @@ window.addEventListener("pywebviewready", async () => {
   $("#copyDir").textContent = state.copyDir; $("#lutDir").textContent = state.lutDir;
   setSwitch("#swInstall", "install"); setSwitch("#swCopy", "copy"); setSwitch("#swSkip", "skip");
   renderLooks(); renderCams(); renderExports();
-  if (!state.cameras.length) toast("No Adobe Standard profiles found. Install Lightroom Classic or Camera Raw.");
   show(s.settings.page || "cams");
 });
 </script>

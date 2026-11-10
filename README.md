@@ -59,8 +59,10 @@ Standard profile (its matrices and calibration) with T as its LookTable and the 
 colours (ΔE76 in Lab). Tested against a film pack's real profiles for other bodies, the method lands within
 about 1 ΔE on average.
 
-You need an Adobe Standard profile for both the original camera and each target camera. They ship with
-Lightroom Classic and Camera Raw in `C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Adobe Standard`.
+You need an Adobe Standard profile for both the original camera and each target camera. Camera Raw installs
+them in `C:\ProgramData\Adobe\CameraRaw\CameraProfiles\Adobe Standard`; Lightroom Classic on its own keeps them
+in its program folder (`C:\Program Files\Adobe\Adobe Lightroom Classic\Resources\CameraProfiles\Adobe Standard`).
+The app looks in both, and if it finds neither it asks you to choose the folder.
 
 ## Phone presets (LUTs)
 

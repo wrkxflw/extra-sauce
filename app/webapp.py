@@ -57,7 +57,7 @@ class Api:
     def __init__(self):
         self._window = None
         self._settings = _load_settings()
-        self._cameras = converter.adobe_standard_cameras()
+        self._cameras = converter.adobe_standard_cameras(self._settings.get("standard_dir"))
         self._looks: dict[str, dict] = {}       # id -> {id, name, versions: {camera: path}}
         self._next_id = 0
         self._exports: dict[str, Path] = {}     # id -> chart export path
@@ -81,7 +81,7 @@ class Api:
         s = self._settings
         return {
             "cameras": sorted(self._cameras, key=str.lower),
-            "standardDir": str(converter.ADOBE_STANDARD_DIR),
+            "standardDirs": [str(d) for d in converter.adobe_standard_dirs(s.get("standard_dir"))],
             "installDir": str(converter.INSTALL_DIR),
             "platform": sys.platform,
             "settings": {
@@ -116,6 +116,20 @@ class Api:
     def browse_folder(self, start=""):
         r = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=start or str(Path.home()))
         return r[0] if r else None
+
+    def pick_standard_folder(self):
+        """Let the user point at a folder of Adobe Standard profiles the search didn't find."""
+        r = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=str(Path.home()))
+        if not r:
+            return None
+        cams = converter.adobe_standard_cameras(r[0])
+        if len(cams) == len(self._cameras):
+            return {"found": 0}
+        self._settings["standard_dir"] = r[0]
+        self._save()
+        self._cameras = cams
+        return {"found": len(cams), "cameras": sorted(cams, key=str.lower),
+                "looks": [self._public(l) for l in self._looks.values()]}
 
     # ---- camera profiles --------------------------------------------------------------
     def pick_profiles(self):
